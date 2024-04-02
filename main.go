@@ -43,7 +43,6 @@ func main() {
 		databaseQueries: db.New(dbConnection),
 	}
 
-	// gin.Engine = Router
 	router := newRouter(app)
 
 	router.Run(*addr)

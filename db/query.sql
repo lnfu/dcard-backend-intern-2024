@@ -125,3 +125,18 @@ VALUES (
             WHERE name = sqlc.arg(platform)
         )
     );
+--
+-- name: CheckGender :one
+SELECT COUNT(*)
+FROM gender
+WHERE code = sqlc.arg(gender);
+--
+-- name: CheckCountry :one
+SELECT COUNT(*)
+FROM country
+WHERE code = sqlc.arg(country);
+--
+-- name: CheckPlatform :one
+SELECT COUNT(*)
+FROM platform
+WHERE name = sqlc.arg(platform);

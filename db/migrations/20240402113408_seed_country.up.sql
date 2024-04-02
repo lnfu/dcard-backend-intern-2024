@@ -1,10 +1,4 @@
 INSERT INTO
-    `gender` (`name`, `code`)
-VALUES
-    ('Male', 'M'),
-    ('Female', 'F');
-
-INSERT INTO
     `country` (`name`, `code`)
 VALUES
     ('Afghanistan', 'AF'),
@@ -265,66 +259,3 @@ VALUES
     ('Yemen', 'YE'),
     ('Zambia', 'ZM'),
     ('Zimbabwe', 'ZW');
-
-INSERT INTO
-    `platform` (`name`)
-VALUES
-    ('android'),
-    ('ios'),
-    ('web');
-
-
-INSERT INTO
-    `advertisement` (
-        `title`,
-        `start_at`,
-        `end_at`
-    )
-VALUES
-    (
-        'Special Offer',
-        '2024-04-01 08:00:00',
-        '2024-04-15 23:59:59'
-    ),
-    (
-        'Limited Time Sale',
-        '2024-04-05 10:00:00',
-        '2024-04-10 23:59:59'
-    ),
-    (
-        'New Product Launch',
-        '2024-04-10 12:00:00',
-        '2024-04-20 23:59:59'
-    );
-
--- CONDITIONs
-
-INSERT INTO
-    `cond` (`age_start`, `age_end`)
-VALUES
-    ('1', '6'),
-    ('18', '24'),
-    ('65', '85'),
-    (NULL, NULL);
-
-
-INSERT INTO
-    `advertisement_cond` (`advertisement_id`, `cond_id`)
-VALUES
-    ('1', '1'),
-    ('2', '2');
-
-INSERT INTO
-    `cond_gender` (`cond_id`, `gender_id`)
-VALUES
-    ('1', '1');
-
-INSERT INTO
-    `cond_country` (`cond_id`, `country_id`)
-VALUES
-    ('1', '1');
-
-INSERT INTO
-    `cond_platform` (`cond_id`, `platform_id`)
-VALUES
-    ('1', '1');

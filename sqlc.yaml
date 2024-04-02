@@ -2,13 +2,13 @@ version: "2"
 # cloud:
 #   project: "<PROJECT_ID>"
 sql:
-  - schema: "./db/init_schema.sql"
-    queries: "./db/query.sql"
+  - schema: "db/migrations"
+    queries: "db/query.sql"
     engine: "mysql"
     gen:
       go: 
         package: "db"
-        out: "./db/sqlc"
+        out: "db/sqlc"
         emit_json_tags: true
         emit_exact_table_names: false
 

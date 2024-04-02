@@ -2,73 +2,15 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
 )
-
-func NullStringFromString(s string) sql.NullString {
-	if s == "" {
-		return sql.NullString{Valid: false}
-	}
-	return sql.NullString{String: s, Valid: true}
-}
-
-func NullInt32FromString(s string) (sql.NullInt32, error) {
-	if s == "" {
-		return sql.NullInt32{Valid: false}, nil
-	}
-	temp, err := strconv.Atoi(s) // TODO error handling (age 輸入給錯)
-	if err != nil {
-		return sql.NullInt32{Valid: false}, err
-	}
-	return sql.NullInt32{Int32: int32(temp), Valid: true}, nil
-}
-
-func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int) {
-	// TODO 可能要做多選參數 (e.g., gender=M,F)
-	var (
-		age                       sql.NullInt32
-		gender, country, platform sql.NullString
-		offset, limit             int
-	)
-
-	age, _ = NullInt32FromString(ctx.Query("age")) // TODO error handling (age 輸入給錯)
-	gender = NullStringFromString(ctx.Query("gender"))
-	country = NullStringFromString(ctx.Query("country"))
-	platform = NullStringFromString(ctx.Query("platform"))
-
-	offset, _ = strconv.Atoi(ctx.Query("offset")) // TODO error handling (offset 輸入給錯)
-	limit, _ = strconv.Atoi(ctx.Query("limit"))   // TODO error handling (limit 輸入給錯)
-	if limit == 0 {
-		limit = 5
-	}
-
-	return age, gender, country, platform, offset, limit
-}
-func (app *application) getAdvertisementHandler(ctx *gin.Context) {
-	age, gender, country, platform, offset, limit := app.getAdvertisementFilters(ctx)
-
-	ads, err := app.databaseQueries.GetAdvertisements(ctx, db.GetAdvertisementsParams{
-		Age:      age,
-		Gender:   gender,
-		Country:  country,
-		Platform: platform,
-		Offset:   int32(offset),
-		Limit:    int32(limit),
-	})
-
-	if err != nil {
-		app.errorLogger.Print(err)
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{
-		"items": ads,
-	})
-}
 
 type CreateAdvertisementRequest struct {
 	Title      string
@@ -85,43 +27,191 @@ type AdvertisementCondition struct {
 	Platform sql.NullString
 }
 
+func NonEmptyNullStringFromString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
+func NullInt32FromString(s string) (sql.NullInt32, error) {
+	if strings.TrimSpace(s) == "" {
+		return sql.NullInt32{Valid: false}, nil
+	}
+	temp, err := strconv.Atoi(s)
+	if err != nil {
+		return sql.NullInt32{Valid: false}, err
+	}
+	return sql.NullInt32{Int32: int32(temp), Valid: true}, nil
+}
+
+func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int, error) {
+	// TODO 可能要做多選參數 (e.g., gender=M,F)
+	var (
+		age                       sql.NullInt32
+		gender, country, platform sql.NullString
+		offset                    int = 0
+		limit                     int = 5
+		err                       error
+	)
+
+	age, err = NullInt32FromString(ctx.Query("age"))
+	if err != nil {
+		return age, gender, country, platform, offset, limit, err
+	}
+	if age.Valid && age.Int32 < 1 || age.Int32 > 100 {
+		return age, gender, country, platform, offset, limit, errors.New("年齡必須介於 1 ~ 100")
+	}
+	gender = NonEmptyNullStringFromString(ctx.Query("gender"))
+	if gender.Valid {
+		// 判斷 gender 在 db 中有資料
+		count, err := app.databaseQueries.CheckGender(ctx, gender.String)
+		if err != nil {
+			return age, gender, country, platform, offset, limit, err
+		}
+		if count == 0 {
+			return age, gender, country, platform, offset, limit, errors.New("未找到提供的 gender 數值")
+		}
+	}
+	country = NonEmptyNullStringFromString(ctx.Query("country"))
+	if country.Valid {
+		// 判斷 country 在 db 中有資料
+		count, err := app.databaseQueries.CheckCountry(ctx, country.String)
+		if err != nil {
+			return age, gender, country, platform, offset, limit, err
+		}
+		if count == 0 {
+			return age, gender, country, platform, offset, limit, errors.New("未找到提供的 country 數值")
+		}
+	}
+	platform = NonEmptyNullStringFromString(ctx.Query("platform"))
+	if platform.Valid {
+		// 判斷 platform 在 db 中有資料
+		count, err := app.databaseQueries.CheckPlatform(ctx, platform.String)
+		if err != nil {
+			return age, gender, country, platform, offset, limit, err
+		}
+		if count == 0 {
+			return age, gender, country, platform, offset, limit, errors.New("未找到提供的 platform 數值")
+		}
+	}
+
+	if offset_str := ctx.Query("offset"); offset_str != "" {
+		offset, err = strconv.Atoi(offset_str)
+		if err != nil {
+			return age, gender, country, platform, offset, limit, err
+		}
+		if offset < 0 {
+			return age, gender, country, platform, offset, limit, errors.New("offset 必須 >= 0")
+		}
+	}
+
+	if limit_str := ctx.Query("limit"); limit_str != "" {
+		limit, err = strconv.Atoi(limit_str)
+		if err != nil {
+			return age, gender, country, platform, offset, limit, err
+		}
+		if limit < 0 {
+			return age, gender, country, platform, offset, limit, errors.New("limit 必須 >= 0")
+		}
+	}
+	return age, gender, country, platform, offset, limit, nil
+}
+
+func (app *application) getAdvertisementHandler(ctx *gin.Context) {
+	age, gender, country, platform, offset, limit, err := app.getAdvertisementFilters(ctx)
+	if err != nil {
+		app.errorLogger.Println(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ads, err := app.databaseQueries.GetAdvertisements(ctx, db.GetAdvertisementsParams{
+		Age:      age,
+		Gender:   gender,
+		Country:  country,
+		Platform: platform,
+		Offset:   int32(offset),
+		Limit:    int32(limit),
+	})
+	if err != nil {
+		app.errorLogger.Println(err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"items": ads,
+	})
+}
+
 func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 	body := CreateAdvertisementRequest{}
-	ctx.BindJSON(&body)
+	err := ctx.BindJSON(&body)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
 
-	advertisementId, _ := app.databaseQueries.CreateAdvertisement(ctx, db.CreateAdvertisementParams{
+	advertisementId, err := app.databaseQueries.CreateAdvertisement(ctx, db.CreateAdvertisementParams{
 		Title:   body.Title,
 		StartAt: body.StartAt,
 		EndAt:   body.EndAt,
 	})
+	if err != nil {
+		app.errorLogger.Println(err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	for _, condition := range body.Conditions {
-		conditionId, _ := app.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
+		conditionId, err := app.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
 			AgeStart: condition.AgeStart,
 			AgeEnd:   condition.AgeEnd,
 		})
+		if err != nil {
+			app.errorLogger.Println(err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
 		if condition.Gender.Valid {
-			app.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
+			err = app.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
 				ConditionID: int32(conditionId),
 				Gender:      condition.Gender.String,
 			})
+			if err != nil {
+				app.errorLogger.Println(err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
 		}
 		if condition.Country.Valid {
-			app.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
+			err = app.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
 				ConditionID: int32(conditionId),
 				Country:     condition.Country.String,
 			})
+			if err != nil {
+				app.errorLogger.Println(err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
 		}
 		if condition.Platform.Valid {
-			app.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
+			err = app.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
 				ConditionID: int32(conditionId),
 				Platform:    condition.Platform.String,
 			})
+			if err != nil {
+				app.errorLogger.Println(err)
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
 		}
-		app.databaseQueries.CreateAdvertisementCondition(ctx, db.CreateAdvertisementConditionParams{
+		err = app.databaseQueries.CreateAdvertisementCondition(ctx, db.CreateAdvertisementConditionParams{
 			AdvertisementID: int32(advertisementId),
 			ConditionID:     int32(conditionId),
 		})
+		if err != nil {
+			app.errorLogger.Println(err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{

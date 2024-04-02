@@ -11,6 +11,45 @@ import (
 	"time"
 )
 
+const checkCountry = `-- name: CheckCountry :one
+SELECT COUNT(*)
+FROM country
+WHERE code = ?
+`
+
+func (q *Queries) CheckCountry(ctx context.Context, country string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkCountry, country)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const checkGender = `-- name: CheckGender :one
+SELECT COUNT(*)
+FROM gender
+WHERE code = ?
+`
+
+func (q *Queries) CheckGender(ctx context.Context, gender string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkGender, gender)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const checkPlatform = `-- name: CheckPlatform :one
+SELECT COUNT(*)
+FROM platform
+WHERE name = ?
+`
+
+func (q *Queries) CheckPlatform(ctx context.Context, platform string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkPlatform, platform)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAdvertisement = `-- name: CreateAdvertisement :execlastid
 INSERT INTO advertisement (title, start_at, end_at)
 VALUES (
