@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
+	"github.com/lnfu/dcard-intern/utils"
 )
 
 func TestNonEmptyNullStringFromString(t *testing.T) {
@@ -47,7 +48,7 @@ func TestNonEmptyNullStringFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NonEmptyNullStringFromString(tt.args.s); !reflect.DeepEqual(got, tt.want) {
+			if got := utils.NonEmptyNullStringFromString(tt.args.s); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NullStringFromString() = %v, want %v", got, tt.want)
 			}
 		})
@@ -115,7 +116,7 @@ func TestNullInt32FromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NullInt32FromString(tt.args.s)
+			got, err := utils.NullInt32FromString(tt.args.s)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NullInt32FromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -200,7 +201,7 @@ func Test_application_getAdvertisementFilters(t *testing.T) {
 			ctx, _ := gin.CreateTestContext(responseRecorder)
 			ctx.Request = req
 
-			age, gender, country, platform, offset, limit, err := app.getAdvertisementFilters(ctx)
+			age, gender, country, platform, offset, limit, err := app.getAdvertisementQueryParameters(ctx)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got error = %v, wantErr %v", err, tt.wantErr)

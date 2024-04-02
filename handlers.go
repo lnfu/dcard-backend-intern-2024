@@ -2,17 +2,18 @@ package main
 
 import (
 	"database/sql"
-	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
+
+	"github.com/lnfu/dcard-intern/utils"
 )
 
-type CreateAdvertisementRequest struct {
+type CreateAdvertisementForm struct {
 	Title      string
 	StartAt    time.Time
 	EndAt      time.Time
@@ -27,25 +28,23 @@ type AdvertisementCondition struct {
 	Platform sql.NullString
 }
 
-func NonEmptyNullStringFromString(s string) sql.NullString {
-	if s == "" {
-		return sql.NullString{Valid: false}
-	}
-	return sql.NullString{String: s, Valid: true}
+type InvalidQueryParameterError struct {
+	ParameterName string
+	Reason        string
 }
 
-func NullInt32FromString(s string) (sql.NullInt32, error) {
-	if strings.TrimSpace(s) == "" {
-		return sql.NullInt32{Valid: false}, nil
-	}
-	temp, err := strconv.Atoi(s)
-	if err != nil {
-		return sql.NullInt32{Valid: false}, err
-	}
-	return sql.NullInt32{Int32: int32(temp), Valid: true}, nil
+func (e InvalidQueryParameterError) Error() string {
+	return fmt.Sprintf("Invalid query parameter '%s': %s", e.ParameterName, e.Reason)
 }
 
-func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int, error) {
+func NewInvalidQueryParameterError(parameterName, reason string) InvalidQueryParameterError {
+	return InvalidQueryParameterError{
+		ParameterName: parameterName,
+		Reason:        reason,
+	}
+}
+
+func (app *application) getAdvertisementQueryParameters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int, error) {
 	// TODO 可能要做多選參數 (e.g., gender=M,F)
 	var (
 		age                       sql.NullInt32
@@ -55,14 +54,14 @@ func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32
 		err                       error
 	)
 
-	age, err = NullInt32FromString(ctx.Query("age"))
+	age, err = utils.NullInt32FromString(ctx.Query("age"))
 	if err != nil {
 		return age, gender, country, platform, offset, limit, err
 	}
 	if age.Valid && age.Int32 < 1 || age.Int32 > 100 {
-		return age, gender, country, platform, offset, limit, errors.New("年齡必須介於 1 ~ 100")
+		return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("age", "must be between 1 and 100")
 	}
-	gender = NonEmptyNullStringFromString(ctx.Query("gender"))
+	gender = utils.NonEmptyNullStringFromString(ctx.Query("gender"))
 	if gender.Valid {
 		// 判斷 gender 在 db 中有資料
 		count, err := app.databaseQueries.CheckGender(ctx, gender.String)
@@ -70,10 +69,10 @@ func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32
 			return age, gender, country, platform, offset, limit, err
 		}
 		if count == 0 {
-			return age, gender, country, platform, offset, limit, errors.New("未找到提供的 gender 數值")
+			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("gender", "not in the database")
 		}
 	}
-	country = NonEmptyNullStringFromString(ctx.Query("country"))
+	country = utils.NonEmptyNullStringFromString(ctx.Query("country"))
 	if country.Valid {
 		// 判斷 country 在 db 中有資料
 		count, err := app.databaseQueries.CheckCountry(ctx, country.String)
@@ -81,10 +80,10 @@ func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32
 			return age, gender, country, platform, offset, limit, err
 		}
 		if count == 0 {
-			return age, gender, country, platform, offset, limit, errors.New("未找到提供的 country 數值")
+			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("country", "not in the database")
 		}
 	}
-	platform = NonEmptyNullStringFromString(ctx.Query("platform"))
+	platform = utils.NonEmptyNullStringFromString(ctx.Query("platform"))
 	if platform.Valid {
 		// 判斷 platform 在 db 中有資料
 		count, err := app.databaseQueries.CheckPlatform(ctx, platform.String)
@@ -92,7 +91,7 @@ func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32
 			return age, gender, country, platform, offset, limit, err
 		}
 		if count == 0 {
-			return age, gender, country, platform, offset, limit, errors.New("未找到提供的 platform 數值")
+			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("platform", "not in the database")
 		}
 	}
 
@@ -102,7 +101,7 @@ func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32
 			return age, gender, country, platform, offset, limit, err
 		}
 		if offset < 0 {
-			return age, gender, country, platform, offset, limit, errors.New("offset 必須 >= 0")
+			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("offset", "must be >= 0")
 		}
 	}
 
@@ -112,17 +111,17 @@ func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32
 			return age, gender, country, platform, offset, limit, err
 		}
 		if limit < 0 {
-			return age, gender, country, platform, offset, limit, errors.New("limit 必須 >= 0")
+			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("limit", "must be >= 0")
 		}
 	}
 	return age, gender, country, platform, offset, limit, nil
 }
 
 func (app *application) getAdvertisementHandler(ctx *gin.Context) {
-	age, gender, country, platform, offset, limit, err := app.getAdvertisementFilters(ctx)
+	age, gender, country, platform, offset, limit, err := app.getAdvertisementQueryParameters(ctx)
 	if err != nil {
 		app.errorLogger.Println(err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -146,10 +145,11 @@ func (app *application) getAdvertisementHandler(ctx *gin.Context) {
 }
 
 func (app *application) createAdvertisementHandler(ctx *gin.Context) {
-	body := CreateAdvertisementRequest{}
+	body := CreateAdvertisementForm{}
 	err := ctx.BindJSON(&body)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	advertisementId, err := app.databaseQueries.CreateAdvertisement(ctx, db.CreateAdvertisementParams{
