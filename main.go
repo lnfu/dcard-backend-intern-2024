@@ -1,79 +1,182 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
+	"flag"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
+	_ "github.com/go-sql-driver/mysql"
+	db "github.com/lnfu/dcard-intern/db/sqlc"
+)
+
+type application struct {
+	errorLogger     *log.Logger
+	infoLoggger     *log.Logger
+	databaseQueries *db.Queries
+}
+
+const (
+	dbDriver = "mysql"
+	dbSource = "web:pass@/dcard?parseTime=true"
 )
 
 func main() {
+	addr := flag.String("addr", ":8080", "HTTP network address")
+	flag.Parse()
+
+	errorLogger := log.New(os.Stderr, color.RedString("ERROR\t"), log.Ldate|log.Ltime|log.Lshortfile)
+	infoLoggger := log.New(os.Stdout, color.BlueString("INFO\t"), log.Ldate|log.Ltime|log.Lshortfile)
+
+	// MySQL Database
+	dbConnection, err := sql.Open(dbDriver, dbSource)
+	if err != nil {
+		errorLogger.Fatal(err)
+	}
+	defer dbConnection.Close()
+
+	app := &application{
+		errorLogger:     errorLogger,
+		infoLoggger:     infoLoggger,
+		databaseQueries: db.New(dbConnection),
+	}
+
+	// gin.Engine = Router
+	router := newRouter(app)
+
+	router.Run(*addr)
+}
+
+func newRouter(app *application) *gin.Engine {
 	router := gin.Default()
 	router.ForwardedByClientIP = true
 	router.SetTrustedProxies([]string{"127.0.0.1"})
 
-	router.GET("/", hello)
-
 	apiV1 := router.Group("api/v1/")
-	apiV1.POST("ad", createAdvertisement)
-	apiV1.GET("ad", listAdvertisement)
+	apiV1.POST("ad", app.createAdvertisementHandler)
+	apiV1.GET("ad", app.getAdvertisementHandler)
 
-	router.Run(":8080")
+	return router
 }
 
-func hello(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, "Hello, World!")
+func NullStringFromString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: s, Valid: true}
 }
 
-type Advertisement struct {
-	Title      string      `json:"title" binding:"required"`
-	AtartAt    time.Time   `json:"startAt" binding:"required"`
-	EndAt      time.Time   `json:"endAt" binding:"required"`
-	Conditions []Condition `json:"conditions"`
+func NullInt32FromString(s string) (sql.NullInt32, error) {
+	if s == "" {
+		return sql.NullInt32{Valid: false}, nil
+	}
+	temp, err := strconv.Atoi(s) // TODO error handling (age 輸入給錯)
+	if err != nil {
+		return sql.NullInt32{Valid: false}, err
+	}
+	return sql.NullInt32{Int32: int32(temp), Valid: true}, nil
 }
 
-type Condition struct {
-	AgeStart int      `json:"ageStart"`
-	AgeEnd   int      `json:"ageEnd"`
-	Country  []string `json:"country"`
-	Platform []string `json:"platform"`
-	Gender   []string `json:"gender"`
-}
+func (app *application) getAdvertisementFilters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int) {
+	// TODO 可能要做多選參數 (e.g., gender=M,F)
+	var (
+		age                       sql.NullInt32
+		gender, country, platform sql.NullString
+		offset, limit             int
+	)
 
-func listAdvertisement(ctx *gin.Context) {
-	offset, _ := strconv.Atoi(ctx.Query("offset"))
-	limit, _ := strconv.Atoi(ctx.Query("limit"))
+	age, _ = NullInt32FromString(ctx.Query("age")) // TODO error handling (age 輸入給錯)
+	gender = NullStringFromString(ctx.Query("gender"))
+	country = NullStringFromString(ctx.Query("country"))
+	platform = NullStringFromString(ctx.Query("platform"))
 
+	offset, _ = strconv.Atoi(ctx.Query("offset")) // TODO error handling (offset 輸入給錯)
+	limit, _ = strconv.Atoi(ctx.Query("limit"))   // TODO error handling (limit 輸入給錯)
 	if limit == 0 {
 		limit = 5
 	}
 
-	age := strings.Split(ctx.Query("age"), ",")
-	gender := strings.Split(ctx.Query("gender"), ",")
-	country := strings.Split(ctx.Query("country"), ",")
-	platform := strings.Split(ctx.Query("platform"), ",")
-	_, _, _, _, _ = offset, age, gender, country, platform
+	return age, gender, country, platform, offset, limit
+}
+func (app *application) getAdvertisementHandler(ctx *gin.Context) {
+	age, gender, country, platform, offset, limit := app.getAdvertisementFilters(ctx)
 
-	// TODO SQL SELECT
+	ads, err := app.databaseQueries.GetAdvertisements(ctx, db.GetAdvertisementsParams{
+		Age:      age,
+		Gender:   gender,
+		Country:  country,
+		Platform: platform,
+		Offset:   int32(offset),
+		Limit:    int32(limit),
+	})
+
+	if err != nil {
+		app.errorLogger.Print(err)
+	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"status": "ok",
+		"items": ads,
 	})
 }
 
-func createAdvertisement(ctx *gin.Context) {
-	advertisement := Advertisement{}
-	fmt.Println(ctx.Request)
+type CreateAdvertisementRequest struct {
+	Title      string
+	StartAt    time.Time
+	EndAt      time.Time
+	Conditions []AdvertisementCondition
+}
 
-	if err := ctx.BindJSON(&advertisement); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+type AdvertisementCondition struct {
+	AgeStart sql.NullInt32
+	AgeEnd   sql.NullInt32
+	Gender   sql.NullString
+	Country  sql.NullString
+	Platform sql.NullString
+}
+
+func (app *application) createAdvertisementHandler(ctx *gin.Context) {
+	body := CreateAdvertisementRequest{}
+	ctx.BindJSON(&body)
+
+	advertisementId, _ := app.databaseQueries.CreateAdvertisement(ctx, db.CreateAdvertisementParams{
+		Title:   body.Title,
+		StartAt: body.StartAt,
+		EndAt:   body.EndAt,
+	})
+
+	for _, condition := range body.Conditions {
+		conditionId, _ := app.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
+			AgeStart: condition.AgeStart,
+			AgeEnd:   condition.AgeEnd,
+		})
+		if condition.Gender.Valid {
+			app.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
+				ConditionID: int32(conditionId),
+				Gender:      condition.Gender.String,
+			})
+		}
+		if condition.Country.Valid {
+			app.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
+				ConditionID: int32(conditionId),
+				Country:     condition.Country.String,
+			})
+		}
+		if condition.Platform.Valid {
+			app.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
+				ConditionID: int32(conditionId),
+				Platform:    condition.Platform.String,
+			})
+		}
+		app.databaseQueries.CreateAdvertisementCondition(ctx, db.CreateAdvertisementConditionParams{
+			AdvertisementID: int32(advertisementId),
+			ConditionID:     int32(conditionId),
+		})
 	}
-
-	// TODO SQL INSERT INTO
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"status": "ok",
