@@ -14,18 +14,19 @@ import (
 )
 
 type CreateAdvertisementForm struct {
-	Title      string
-	StartAt    time.Time
-	EndAt      time.Time
-	Conditions []AdvertisementCondition
+	Title      string                   `json:"title" example:"AD 55" extensions:"x-order=0"`
+	StartAt    time.Time                `json:"startAt" example:"2023-12-10T03:00:00.000Z" extensions:"x-order=1"`
+	EndAt      time.Time                `json:"endAt" example:"2023-12-31T16:00:00.000Z" extensions:"x-order=2"`
+	Conditions []AdvertisementCondition `json:"conditions" extensions:"x-order=3"`
 }
 
 type AdvertisementCondition struct {
-	AgeStart sql.NullInt32
-	AgeEnd   sql.NullInt32
-	Gender   sql.NullString
-	Country  sql.NullString
-	Platform sql.NullString
+	// TODO gender, country, platform 可以多選
+	AgeStart *int    `json:"ageStart,omitempty" example:"20" swaggertype:"integer" extensions:"x-order=0"`
+	AgeEnd   *int    `json:"ageEnd,omitempty" example:"30" swaggertype:"integer" extensions:"x-order=1"`
+	Gender   *string `json:"gender,omitempty" example:"M" swaggertype:"string" extensions:"x-order=2"`
+	Country  *string `json:"country,omitempty" example:"TW" swaggertype:"string" extensions:"x-order=3"`
+	Platform *string `json:"platform,omitempty" example:"ios" swaggertype:"string" extensions:"x-order=4"`
 }
 
 type InvalidQueryParameterError struct {
@@ -46,6 +47,7 @@ func NewInvalidQueryParameterError(parameterName, reason string) InvalidQueryPar
 
 func (app *application) getAdvertisementQueryParameters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int, error) {
 	// TODO 可能要做多選參數 (e.g., gender=M,F)
+	// TODO 關於 database 的錯誤理論上應該是回 internal server error
 	var (
 		age                       sql.NullInt32
 		gender, country, platform sql.NullString
@@ -117,6 +119,18 @@ func (app *application) getAdvertisementQueryParameters(ctx *gin.Context) (sql.N
 	return age, gender, country, platform, offset, limit, nil
 }
 
+// @Summary		列出符合可⽤和匹配⽬標條件的廣告
+// @BasePath	/api/v1
+// @Version		1.0
+// @Param		age query int false "年齡條件" minimum(1) maximum(100)
+// @Param		gender query string false "性別條件 (M/F)" Enums(M, F)
+// @Param		country query string false "國家條件 (參考 ISO_3166-1 alpha-2)"
+// @Param		platform query string false "平台條件" Enums(android, ios, web)
+// @Param		offset query int false " "
+// @Param		limit query int false " "
+// @Produce		json
+// @Tags		advertisement
+// @Router		/ad [get]
 func (app *application) getAdvertisementHandler(ctx *gin.Context) {
 	age, gender, country, platform, offset, limit, err := app.getAdvertisementQueryParameters(ctx)
 	if err != nil {
@@ -144,6 +158,13 @@ func (app *application) getAdvertisementHandler(ctx *gin.Context) {
 	})
 }
 
+// @Summary		產⽣廣告資源
+// @BasePath	/api/v1
+// @Version		1.0
+// @Param		request body main.CreateAdvertisementForm true "廣告內容"
+// @Produce		json
+// @Tags		advertisement
+// @Router		/ad [post]
 func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 	body := CreateAdvertisementForm{}
 	err := ctx.BindJSON(&body)
@@ -165,38 +186,38 @@ func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 
 	for _, condition := range body.Conditions {
 		conditionId, err := app.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
-			AgeStart: condition.AgeStart,
-			AgeEnd:   condition.AgeEnd,
+			AgeStart: utils.NullInt32FromInt32Pointer(condition.AgeStart),
+			AgeEnd:   utils.NullInt32FromInt32Pointer(condition.AgeEnd),
 		})
 		if err != nil {
 			app.errorLogger.Println(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 
-		if condition.Gender.Valid {
+		if condition.Gender != nil {
 			err = app.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
 				ConditionID: int32(conditionId),
-				Gender:      condition.Gender.String,
+				Gender:      *(condition.Gender),
 			})
 			if err != nil {
 				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
-		if condition.Country.Valid {
+		if condition.Country != nil {
 			err = app.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
 				ConditionID: int32(conditionId),
-				Country:     condition.Country.String,
+				Country:     *(condition.Country),
 			})
 			if err != nil {
 				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
-		if condition.Platform.Valid {
+		if condition.Platform != nil {
 			err = app.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
 				ConditionID: int32(conditionId),
-				Platform:    condition.Platform.String,
+				Platform:    *(condition.Platform),
 			})
 			if err != nil {
 				app.errorLogger.Println(err)

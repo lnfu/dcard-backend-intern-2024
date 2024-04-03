@@ -23,3 +23,10 @@ func NullInt32FromString(s string) (sql.NullInt32, error) {
 	}
 	return sql.NullInt32{Int32: int32(temp), Valid: true}, nil
 }
+
+func NullInt32FromInt32Pointer(int_p *int) sql.NullInt32 {
+	if int_p == nil {
+		return sql.NullInt32{Valid: false}
+	}
+	return sql.NullInt32{Int32: int32(*int_p), Valid: true}
+}

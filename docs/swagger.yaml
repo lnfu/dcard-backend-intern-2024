@@ -1,0 +1,110 @@
+definitions:
+  main.AdvertisementCondition:
+    properties:
+      ageEnd:
+        example: 30
+        type: integer
+        x-order: "1"
+      ageStart:
+        description: TODO gender, country, platform 可以多選
+        example: 20
+        type: integer
+        x-order: "0"
+      country:
+        example: TW
+        type: string
+        x-order: "3"
+      gender:
+        example: M
+        type: string
+        x-order: "2"
+      platform:
+        example: ios
+        type: string
+        x-order: "4"
+    type: object
+  main.CreateAdvertisementForm:
+    properties:
+      conditions:
+        items:
+          $ref: '#/definitions/main.AdvertisementCondition'
+        type: array
+        x-order: "3"
+      endAt:
+        example: "2023-12-31T16:00:00.000Z"
+        type: string
+        x-order: "2"
+      startAt:
+        example: "2023-12-10T03:00:00.000Z"
+        type: string
+        x-order: "1"
+      title:
+        example: AD 55
+        type: string
+        x-order: "0"
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 請⽤ Golang 設計並且實作⼀個簡化的廣告投放服務，該服務應該有兩個 API，⼀個⽤於產⽣廣告，⼀個⽤於列出廣告。每個廣告都有它出現的條件(例如跟據使⽤者的年齡)，產⽣廣告的
+    API ⽤來產⽣與設定條件。投放廣告的 API 就要跟據條件列出符合使⽤條件的廣告
+  title: Dcard Backend Intern 2024
+  version: "1.0"
+paths:
+  /ad:
+    get:
+      parameters:
+      - description: 年齡條件
+        in: query
+        maximum: 100
+        minimum: 1
+        name: age
+        type: integer
+      - description: 性別條件 (M/F)
+        enum:
+        - M
+        - F
+        in: query
+        name: gender
+        type: string
+      - description: 國家條件 (參考 ISO_3166-1 alpha-2)
+        in: query
+        name: country
+        type: string
+      - description: 平台條件
+        enum:
+        - android
+        - ios
+        - web
+        in: query
+        name: platform
+        type: string
+      - description: ' '
+        in: query
+        name: offset
+        type: integer
+      - description: ' '
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses: {}
+      summary: 列出符合可⽤和匹配⽬標條件的廣告
+      tags:
+      - advertisement
+    post:
+      parameters:
+      - description: 廣告內容
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.CreateAdvertisementForm'
+      produces:
+      - application/json
+      responses: {}
+      summary: 產⽣廣告資源
+      tags:
+      - advertisement
+swagger: "2.0"
