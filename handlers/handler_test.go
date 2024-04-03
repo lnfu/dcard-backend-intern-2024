@@ -1,30 +1,33 @@
-package main
+package handlers
 
 import (
 	"database/sql"
-	"log"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/fatih/color"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
 )
 
+// TODO 測試用 mysql 環境
+const (
+	dbDriver = "mysql"
+	dbSource = "web:pass@/dcard?parseTime=true"
+)
+
 func Test_application_getAdvertisementFilters(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// TODO 完成 test 會用到的環境設定
-	dbConnection, _ := sql.Open(dbDriver, dbSource)
-	defer dbConnection.Close()
-	app := &application{
-		errorLogger:     log.New(os.Stderr, color.RedString("ERROR\t"), log.Ldate|log.Ltime|log.Lshortfile),
-		infoLoggger:     log.New(os.Stdout, color.BlueString("INFO\t"), log.Ldate|log.Ltime|log.Lshortfile),
-		databaseQueries: db.New(dbConnection),
+	dbConnection, err := sql.Open(dbDriver, dbSource)
+	if err != nil {
+		// TODO error handling 改寫
+		fmt.Println(err.Error())
 	}
+	defer dbConnection.Close()
+	handler := NewHandler(db.New(dbConnection))
 
 	tests := []struct {
 		name         string
@@ -87,7 +90,7 @@ func Test_application_getAdvertisementFilters(t *testing.T) {
 			ctx, _ := gin.CreateTestContext(responseRecorder)
 			ctx.Request = req
 
-			age, gender, country, platform, offset, limit, err := app.getAdvertisementQueryParameters(ctx)
+			age, gender, country, platform, offset, limit, err := handler.getAdvertisementQueryParameters(ctx)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("got error = %v, wantErr %v", err, tt.wantErr)

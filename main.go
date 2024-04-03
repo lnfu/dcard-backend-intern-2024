@@ -11,6 +11,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
 	docs "github.com/lnfu/dcard-intern/docs"
+	"github.com/lnfu/dcard-intern/handlers"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -44,28 +45,31 @@ func main() {
 	}
 	defer dbConnection.Close()
 
+	// TODO app refactor (甚至拿掉?)
 	app := &application{
 		errorLogger:     errorLogger,
 		infoLoggger:     infoLoggger,
 		databaseQueries: db.New(dbConnection),
 	}
+	_ = app
 
-	router := newRouter(app)
-	router.Run(*addr)
-}
+	router := newRouter()
 
-func newRouter(app *application) *gin.Engine {
-	router := gin.Default()
-	router.ForwardedByClientIP = true
-	router.SetTrustedProxies([]string{"127.0.0.1"})
-
+	handler := handlers.NewHandler(db.New(dbConnection))
 	apiV1 := router.Group("api/v1/")
-	apiV1.POST("ad", app.createAdvertisementHandler)
-	apiV1.GET("ad", app.getAdvertisementHandler)
+	apiV1.POST("ad", handler.CreateAdvertisementHandler)
+	apiV1.GET("ad", handler.GetAdvertisementHandler)
 
 	// Swagger
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	apiV1.GET("swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
+	router.Run(*addr)
+}
+
+func newRouter() *gin.Engine {
+	router := gin.Default()
+	router.ForwardedByClientIP = true
+	router.SetTrustedProxies([]string{"127.0.0.1"})
 	return router
 }
