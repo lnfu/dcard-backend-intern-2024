@@ -21,7 +21,6 @@ type CreateAdvertisementForm struct {
 }
 
 type AdvertisementCondition struct {
-	// TODO gender, country, platform 可以多選
 	AgeStart *int     `json:"ageStart,omitempty" example:"20" swaggertype:"integer" extensions:"x-order=0"`
 	AgeEnd   *int     `json:"ageEnd,omitempty" example:"30" swaggertype:"integer" extensions:"x-order=1"`
 	Gender   []string `json:"gender,omitempty" example:"M" swaggertype:"array,string" extensions:"x-order=2"`
@@ -134,7 +133,6 @@ func (app *application) getAdvertisementQueryParameters(ctx *gin.Context) (sql.N
 func (app *application) getAdvertisementHandler(ctx *gin.Context) {
 	age, gender, country, platform, offset, limit, err := app.getAdvertisementQueryParameters(ctx)
 	if err != nil {
-		app.errorLogger.Println(err)
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -148,7 +146,6 @@ func (app *application) getAdvertisementHandler(ctx *gin.Context) {
 		Limit:    int32(limit),
 	})
 	if err != nil {
-		app.errorLogger.Println(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -179,54 +176,95 @@ func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 		EndAt:   body.EndAt,
 	})
 	if err != nil {
-		app.errorLogger.Println(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	for _, condition := range body.Conditions {
-		// TODO 判斷年齡是 1 ~ 100
+		// 判斷年齡是 1 ~ 100
+		ageStart := utils.NullInt32FromInt32Pointer(condition.AgeStart)
+		if ageStart.Valid && ageStart.Int32 < 1 || ageStart.Int32 > 100 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": NewInvalidQueryParameterError("ageStart", "must be between 1 and 100").Error()})
+			return
+		}
+		ageEnd := utils.NullInt32FromInt32Pointer(condition.AgeEnd)
+		if ageEnd.Valid && ageEnd.Int32 < 1 || ageEnd.Int32 > 100 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": NewInvalidQueryParameterError("ageEnd", "must be between 1 and 100").Error()})
+			return
+		}
+		// 判斷 ageStart <= ageEnd
+		if ageStart.Valid && ageEnd.Valid && ageStart.Int32 > ageEnd.Int32 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": NewInvalidQueryParameterError("ageEnd", "must be greater than ageStart").Error()})
+			return
+		}
 		conditionId, err := app.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
-			AgeStart: utils.NullInt32FromInt32Pointer(condition.AgeStart),
+			AgeStart: ageStart,
 			AgeEnd:   utils.NullInt32FromInt32Pointer(condition.AgeEnd),
 		})
 		if err != nil {
-			app.errorLogger.Println(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
-		// TODO 判斷 gender 是 M/F
 		for _, gender := range condition.Gender {
+			// 判斷 gender 在 db 中有資料
+			count, err := app.databaseQueries.CheckGender(ctx, gender)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			if count == 0 {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("gender", "not in the database").Error()})
+				return
+			}
+
 			err = app.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
 				ConditionID: int32(conditionId),
 				Gender:      gender,
 			})
 			if err != nil {
-				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
 
-		// TODO 判斷 country in database
 		for _, country := range condition.Country {
+			// 判斷 country 在 db 中有資料
+			count, err := app.databaseQueries.CheckCountry(ctx, country)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			if count == 0 {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("country", "not in the database").Error()})
+				return
+			}
+
 			err = app.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
 				ConditionID: int32(conditionId),
 				Country:     country,
 			})
 			if err != nil {
-				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
 
-		// TODO 判斷 platform 是 android/ios/web
 		for _, platform := range condition.Platform {
+			// 判斷 platform 在 db 中有資料
+			count, err := app.databaseQueries.CheckPlatform(ctx, platform)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			if count == 0 {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("platform", "not in the database").Error()})
+				return
+			}
+
 			err = app.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
 				ConditionID: int32(conditionId),
 				Platform:    platform,
 			})
 			if err != nil {
-				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
@@ -235,7 +273,6 @@ func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 			ConditionID:     int32(conditionId),
 		})
 		if err != nil {
-			app.errorLogger.Println(err)
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
