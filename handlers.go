@@ -22,11 +22,11 @@ type CreateAdvertisementForm struct {
 
 type AdvertisementCondition struct {
 	// TODO gender, country, platform 可以多選
-	AgeStart *int    `json:"ageStart,omitempty" example:"20" swaggertype:"integer" extensions:"x-order=0"`
-	AgeEnd   *int    `json:"ageEnd,omitempty" example:"30" swaggertype:"integer" extensions:"x-order=1"`
-	Gender   *string `json:"gender,omitempty" example:"M" swaggertype:"string" extensions:"x-order=2"`
-	Country  *string `json:"country,omitempty" example:"TW" swaggertype:"string" extensions:"x-order=3"`
-	Platform *string `json:"platform,omitempty" example:"ios" swaggertype:"string" extensions:"x-order=4"`
+	AgeStart *int     `json:"ageStart,omitempty" example:"20" swaggertype:"integer" extensions:"x-order=0"`
+	AgeEnd   *int     `json:"ageEnd,omitempty" example:"30" swaggertype:"integer" extensions:"x-order=1"`
+	Gender   []string `json:"gender,omitempty" example:"M" swaggertype:"array,string" extensions:"x-order=2"`
+	Country  []string `json:"country,omitempty" example:"TW,JP" swaggertype:"array,string" extensions:"x-order=3"`
+	Platform []string `json:"platform,omitempty" example:"android,ios" swaggertype:"array,string" extensions:"x-order=4"`
 }
 
 type InvalidQueryParameterError struct {
@@ -185,6 +185,7 @@ func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 	}
 
 	for _, condition := range body.Conditions {
+		// TODO 判斷年齡是 1 ~ 100
 		conditionId, err := app.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
 			AgeStart: utils.NullInt32FromInt32Pointer(condition.AgeStart),
 			AgeEnd:   utils.NullInt32FromInt32Pointer(condition.AgeEnd),
@@ -194,30 +195,35 @@ func (app *application) createAdvertisementHandler(ctx *gin.Context) {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 
-		if condition.Gender != nil {
+		// TODO 判斷 gender 是 M/F
+		for _, gender := range condition.Gender {
 			err = app.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
 				ConditionID: int32(conditionId),
-				Gender:      *(condition.Gender),
+				Gender:      gender,
 			})
 			if err != nil {
 				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
-		if condition.Country != nil {
+
+		// TODO 判斷 country in database
+		for _, country := range condition.Country {
 			err = app.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
 				ConditionID: int32(conditionId),
-				Country:     *(condition.Country),
+				Country:     country,
 			})
 			if err != nil {
 				app.errorLogger.Println(err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 		}
-		if condition.Platform != nil {
+
+		// TODO 判斷 platform 是 android/ios/web
+		for _, platform := range condition.Platform {
 			err = app.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
 				ConditionID: int32(conditionId),
-				Platform:    *(condition.Platform),
+				Platform:    platform,
 			})
 			if err != nil {
 				app.errorLogger.Println(err)

@@ -11,16 +11,27 @@ definitions:
         type: integer
         x-order: "0"
       country:
-        example: TW
-        type: string
+        example:
+        - TW
+        - JP
+        items:
+          type: string
+        type: array
         x-order: "3"
       gender:
-        example: M
-        type: string
+        example:
+        - M
+        items:
+          type: string
+        type: array
         x-order: "2"
       platform:
-        example: ios
-        type: string
+        example:
+        - android
+        - ios
+        items:
+          type: string
+        type: array
         x-order: "4"
     type: object
   main.CreateAdvertisementForm:

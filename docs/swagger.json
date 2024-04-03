@@ -107,19 +107,36 @@
                     "example": 30
                 },
                 "gender": {
-                    "type": "string",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
                     "x-order": "2",
-                    "example": "M"
+                    "example": [
+                        "M"
+                    ]
                 },
                 "country": {
-                    "type": "string",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
                     "x-order": "3",
-                    "example": "TW"
+                    "example": [
+                        "TW",
+                        "JP"
+                    ]
                 },
                 "platform": {
-                    "type": "string",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
                     "x-order": "4",
-                    "example": "ios"
+                    "example": [
+                        "android",
+                        "ios"
+                    ]
                 }
             }
         },
