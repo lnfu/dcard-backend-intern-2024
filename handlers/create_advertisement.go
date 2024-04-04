@@ -84,15 +84,28 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		}
 
 		for _, gender := range condition.Gender {
-			// 判斷 gender 在 db 中有資料
-			count, err := handler.databaseQueries.CheckGender(ctx, gender)
+			// 判斷 gender 在 cache/db 中有資料
+			exist, err := handler.cac.IsGenderInCachedSet(ctx, gender)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			if count == 0 {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("gender", "not in the database").Error()})
-				return
+			if !exist {
+				count, err := handler.databaseQueries.CheckGender(ctx, gender)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				if count == 0 {
+					ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("gender", "not in the database").Error()})
+					return
+				}
+				// ok
+				err = handler.cac.AddGenderToCachedSet(ctx, gender)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
 			}
 
 			err = handler.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
@@ -105,15 +118,28 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		}
 
 		for _, country := range condition.Country {
-			// 判斷 country 在 db 中有資料
-			count, err := handler.databaseQueries.CheckCountry(ctx, country)
+			// 判斷 country 在 cache/db 中有資料
+			exist, err := handler.cac.IsCountryInCachedSet(ctx, country)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			if count == 0 {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("country", "not in the database").Error()})
-				return
+			if !exist {
+				count, err := handler.databaseQueries.CheckCountry(ctx, country)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				if count == 0 {
+					ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("country", "not in the database").Error()})
+					return
+				}
+				// ok
+				err = handler.cac.AddCountryToCachedSet(ctx, country)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
 			}
 
 			err = handler.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
@@ -126,15 +152,28 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		}
 
 		for _, platform := range condition.Platform {
-			// 判斷 platform 在 db 中有資料
-			count, err := handler.databaseQueries.CheckPlatform(ctx, platform)
+			// 判斷 platform 在 cache/db 中有資料
+			exist, err := handler.cac.IsPlatformInCachedSet(ctx, platform)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			if count == 0 {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("platform", "not in the database").Error()})
-				return
+			if !exist {
+				count, err := handler.databaseQueries.CheckPlatform(ctx, platform)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				if count == 0 {
+					ctx.JSON(http.StatusBadRequest, gin.H{"error": NewInvalidQueryParameterError("platform", "not in the database").Error()})
+					return
+				}
+				// ok
+				err = handler.cac.AddPlatformToCachedSet(ctx, platform)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
 			}
 
 			err = handler.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{

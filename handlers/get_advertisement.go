@@ -31,35 +31,68 @@ func (handler *Handler) getAdvertisementQueryParameters(ctx *gin.Context) (sql.N
 	}
 	gender = utils.NonEmptyNullStringFromString(ctx.Query("gender"))
 	if gender.Valid {
-		// 判斷 gender 在 db 中有資料
-		count, err := handler.databaseQueries.CheckGender(ctx, gender.String)
+		// 判斷 gender 在 cache/db 中有資料
+		exist, err := handler.cac.IsGenderInCachedSet(ctx, gender.String)
 		if err != nil {
 			return age, gender, country, platform, offset, limit, err
 		}
-		if count == 0 {
-			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("gender", "not in the database")
+		if !exist {
+			count, err := handler.databaseQueries.CheckGender(ctx, gender.String)
+			if err != nil {
+				return age, gender, country, platform, offset, limit, err
+			}
+			if count == 0 {
+				return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("gender", "not in the database")
+			}
+			// ok
+			err = handler.cac.AddGenderToCachedSet(ctx, gender.String)
+			if err != nil {
+				return age, gender, country, platform, offset, limit, err
+			}
 		}
 	}
 	country = utils.NonEmptyNullStringFromString(ctx.Query("country"))
 	if country.Valid {
-		// 判斷 country 在 db 中有資料
-		count, err := handler.databaseQueries.CheckCountry(ctx, country.String)
+		// 判斷 country 在 cache/db 中有資料
+		exist, err := handler.cac.IsCountryInCachedSet(ctx, country.String)
 		if err != nil {
 			return age, gender, country, platform, offset, limit, err
 		}
-		if count == 0 {
-			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("country", "not in the database")
+		if !exist {
+			count, err := handler.databaseQueries.CheckCountry(ctx, country.String)
+			if err != nil {
+				return age, gender, country, platform, offset, limit, err
+			}
+			if count == 0 {
+				return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("country", "not in the database")
+			}
+			// ok
+			err = handler.cac.AddCountryToCachedSet(ctx, country.String)
+			if err != nil {
+				return age, gender, country, platform, offset, limit, err
+			}
 		}
 	}
 	platform = utils.NonEmptyNullStringFromString(ctx.Query("platform"))
 	if platform.Valid {
-		// 判斷 platform 在 db 中有資料
-		count, err := handler.databaseQueries.CheckPlatform(ctx, platform.String)
+		// 判斷 platform 在 cache/db 中有資料
+		exist, err := handler.cac.IsPlatformInCachedSet(ctx, platform.String)
 		if err != nil {
 			return age, gender, country, platform, offset, limit, err
 		}
-		if count == 0 {
-			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("platform", "not in the database")
+		if !exist {
+			count, err := handler.databaseQueries.CheckPlatform(ctx, platform.String)
+			if err != nil {
+				return age, gender, country, platform, offset, limit, err
+			}
+			if count == 0 {
+				return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("platform", "not in the database")
+			}
+			// ok
+			err = handler.cac.AddPlatformToCachedSet(ctx, platform.String)
+			if err != nil {
+				return age, gender, country, platform, offset, limit, err
+			}
 		}
 	}
 

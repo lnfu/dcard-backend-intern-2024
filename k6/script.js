@@ -12,7 +12,7 @@ export let options = {
       rate: 10000, // 200 RPS, since timeUnit is the default 1s
       duration: "1m",
       preAllocatedVUs: 50,
-      maxVUs: 1000,
+      maxVUs: 10000,
     },
   },
 };
