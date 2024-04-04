@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/lnfu/dcard-intern/cache"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
 	docs "github.com/lnfu/dcard-intern/docs"
 	"github.com/lnfu/dcard-intern/handlers"
@@ -31,15 +32,18 @@ func main() {
 	// MySQL Database
 	dbConnection, err := sql.Open(dbDriver, dbSource)
 	if err != nil {
-		log.Fatalf("無法連接 MySQL: %v", err)
+		log.Fatalf("MySQL: 無法連接 (%v)\n", err)
 	}
 	defer dbConnection.Close()
+
+	// Redis
+	cac := cache.NewCache()
 
 	// Gin Engine (router)
 	router := newRouter()
 
 	// Handlers
-	handler := handlers.NewHandler(db.New(dbConnection))
+	handler := handlers.NewHandler(db.New(dbConnection), cac)
 	apiV1 := router.Group("api/v1/")
 	apiV1.POST("ad", handler.CreateAdvertisementHandler)
 	apiV1.GET("ad", handler.GetAdvertisementHandler)

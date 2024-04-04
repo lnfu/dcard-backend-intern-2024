@@ -5,7 +5,7 @@ import { sleep, check } from "k6";
 const host = "http://localhost:8080";
 
 export let options = {
-  // setupTimeout: "500s",
+  setupTimeout: "500s",
   scenarios: {
     contacts: {
       executor: "constant-arrival-rate",
@@ -36,7 +36,7 @@ const platforms = [
 ];
 
 // export function setup() {
-//   for (let i = 0; i < 3000; i++) {
+//   for (let i = 0; i < 1000; i++) {
 //     const ageStart = randomInt(1, 100);
 //     const now = new Date();
 //     const todayStart = new Date( // 今天的 00:00:00

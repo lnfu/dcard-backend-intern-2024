@@ -11,9 +11,9 @@ import (
 )
 
 type CreateAdvertisementForm struct {
-	Title      string                   `json:"title" example:"AD 55" extensions:"x-order=0"`
-	StartAt    time.Time                `json:"startAt" example:"2023-12-10T03:00:00.000Z" extensions:"x-order=1"`
-	EndAt      time.Time                `json:"endAt" example:"2023-12-31T16:00:00.000Z" extensions:"x-order=2"`
+	Title      string                   `json:"title" binding:"required" example:"AD 55" extensions:"x-order=0"`
+	StartAt    time.Time                `json:"startAt" binding:"required" example:"2023-12-10T03:00:00.000Z" extensions:"x-order=1"`
+	EndAt      time.Time                `json:"endAt" binding:"required" example:"2023-12-31T16:00:00.000Z" extensions:"x-order=2"`
 	Conditions []AdvertisementCondition `json:"conditions" extensions:"x-order=3"`
 }
 

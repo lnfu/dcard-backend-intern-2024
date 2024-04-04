@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/lnfu/dcard-intern/cache"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
 )
 
@@ -27,7 +28,9 @@ func Test_application_getAdvertisementFilters(t *testing.T) {
 		fmt.Println(err.Error())
 	}
 	defer dbConnection.Close()
-	handler := NewHandler(db.New(dbConnection))
+
+	cac := cache.NewCache()
+	handler := NewHandler(db.New(dbConnection), cac)
 
 	tests := []struct {
 		name         string

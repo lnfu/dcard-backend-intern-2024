@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -12,7 +13,6 @@ import (
 )
 
 func (handler *Handler) getAdvertisementQueryParameters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int, error) {
-	// TODO 可能要做多選參數 (e.g., gender=M,F)
 	// TODO 關於 database 的錯誤理論上應該是回 internal server error
 	var (
 		age                       sql.NullInt32
@@ -103,18 +103,33 @@ func (handler *Handler) GetAdvertisementHandler(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	ads, err := handler.databaseQueries.GetActiveAdvertisements(ctx, db.GetActiveAdvertisementsParams{
+	params := db.GetActiveAdvertisementsParams{
 		Age:      age,
 		Gender:   gender,
 		Country:  country,
 		Platform: platform,
 		Offset:   int32(offset),
 		Limit:    int32(limit),
-	})
+	}
+
+	// search cache
+	ads, err := handler.cac.GetAdvertisementsFromCache(ctx, params)
+	if err == nil {
+		ctx.JSON(http.StatusOK, gin.H{
+			"items": ads,
+		})
+		return
+	}
+
+	// search database
+	ads, err = handler.databaseQueries.GetActiveAdvertisements(ctx, params)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+	err = handler.cac.SetAdvertisementsToCache(ctx, params, ads)
+	if err != nil {
+		log.Fatalf("Redis: 無法新增 Cache (%v)\n", err)
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
