@@ -1,12 +1,11 @@
 definitions:
-  main.AdvertisementCondition:
+  handlers.AdvertisementCondition:
     properties:
       ageEnd:
         example: 30
         type: integer
         x-order: "1"
       ageStart:
-        description: TODO gender, country, platform 可以多選
         example: 20
         type: integer
         x-order: "0"
@@ -34,11 +33,11 @@ definitions:
         type: array
         x-order: "4"
     type: object
-  main.CreateAdvertisementForm:
+  handlers.CreateAdvertisementForm:
     properties:
       conditions:
         items:
-          $ref: '#/definitions/main.AdvertisementCondition'
+          $ref: '#/definitions/handlers.AdvertisementCondition'
         type: array
         x-order: "3"
       endAt:
@@ -53,6 +52,10 @@ definitions:
         example: AD 55
         type: string
         x-order: "0"
+    required:
+    - endAt
+    - startAt
+    - title
     type: object
 host: localhost:8080
 info:
@@ -111,7 +114,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/main.CreateAdvertisementForm'
+          $ref: '#/definitions/handlers.CreateAdvertisementForm'
       produces:
       - application/json
       responses: {}

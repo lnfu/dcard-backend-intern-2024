@@ -35,7 +35,7 @@ func NewInvalidQueryParameterError(parameterName, reason string) InvalidQueryPar
 // @Summary		產⽣廣告資源
 // @BasePath	/api/v1
 // @Version		1.0
-// @Param		request body main.CreateAdvertisementForm true "廣告內容"
+// @Param		request body handlers.CreateAdvertisementForm true "廣告內容"
 // @Produce		json
 // @Tags		advertisement
 // @Router		/ad [post]

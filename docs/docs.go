@@ -90,7 +90,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.CreateAdvertisementForm"
+                            "$ref": "#/definitions/handlers.CreateAdvertisementForm"
                         }
                     }
                 ],
@@ -99,11 +99,10 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "main.AdvertisementCondition": {
+        "handlers.AdvertisementCondition": {
             "type": "object",
             "properties": {
                 "ageStart": {
-                    "description": "TODO gender, country, platform 可以多選",
                     "type": "integer",
                     "x-order": "0",
                     "example": 20
@@ -147,8 +146,13 @@ const docTemplate = `{
                 }
             }
         },
-        "main.CreateAdvertisementForm": {
+        "handlers.CreateAdvertisementForm": {
             "type": "object",
+            "required": [
+                "endAt",
+                "startAt",
+                "title"
+            ],
             "properties": {
                 "title": {
                     "type": "string",
@@ -168,7 +172,7 @@ const docTemplate = `{
                 "conditions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.AdvertisementCondition"
+                        "$ref": "#/definitions/handlers.AdvertisementCondition"
                     },
                     "x-order": "3"
                 }

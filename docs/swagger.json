@@ -83,7 +83,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/main.CreateAdvertisementForm"
+                            "$ref": "#/definitions/handlers.CreateAdvertisementForm"
                         }
                     }
                 ],
@@ -92,11 +92,10 @@
         }
     },
     "definitions": {
-        "main.AdvertisementCondition": {
+        "handlers.AdvertisementCondition": {
             "type": "object",
             "properties": {
                 "ageStart": {
-                    "description": "TODO gender, country, platform 可以多選",
                     "type": "integer",
                     "x-order": "0",
                     "example": 20
@@ -140,8 +139,13 @@
                 }
             }
         },
-        "main.CreateAdvertisementForm": {
+        "handlers.CreateAdvertisementForm": {
             "type": "object",
+            "required": [
+                "endAt",
+                "startAt",
+                "title"
+            ],
             "properties": {
                 "title": {
                     "type": "string",
@@ -161,7 +165,7 @@
                 "conditions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.AdvertisementCondition"
+                        "$ref": "#/definitions/handlers.AdvertisementCondition"
                     },
                     "x-order": "3"
                 }
