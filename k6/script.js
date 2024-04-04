@@ -5,10 +5,16 @@ import { sleep, check } from "k6";
 const host = "http://localhost:8080";
 
 export let options = {
-  setupTimeout: "500s",
-  vus: 10000,
-  duration: "10s",
-  rps: 10000, // Requests per second
+  // setupTimeout: "500s",
+  scenarios: {
+    contacts: {
+      executor: "constant-arrival-rate",
+      rate: 10000, // 200 RPS, since timeUnit is the default 1s
+      duration: "1m",
+      preAllocatedVUs: 50,
+      maxVUs: 1000,
+    },
+  },
 };
 
 // 產生 [min, max] 的隨機整數
@@ -76,6 +82,6 @@ const platforms = [
 // }
 
 export default function () {
-  http.get(`${host}/api/v1/ad`);
+  let res = http.get(`${host}/api/v1/ad`);
   sleep(1);
 }
