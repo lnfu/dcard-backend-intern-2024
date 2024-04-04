@@ -1,11 +1,13 @@
 --
--- name: GetAdvertisements :many
+-- name: GetActiveAdvertisements :many
 SELECT advertisement.id,
     title,
     start_at,
     end_at
 FROM advertisement
-WHERE NOT EXISTS (
+WHERE advertisement.start_at < NOW()
+    AND advertisement.end_at > NOW()
+    AND NOT EXISTS (
         SELECT 1
         FROM advertisement_cond
         WHERE advertisement_cond.advertisement_id = advertisement.id
@@ -16,7 +18,9 @@ SELECT advertisement.id,
     start_at,
     end_at
 FROM advertisement
-WHERE EXISTS(
+WHERE advertisement.start_at < NOW()
+    AND advertisement.end_at > NOW()
+    AND EXISTS(
         SELECT 1
         FROM advertisement_cond
         WHERE (

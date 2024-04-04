@@ -178,13 +178,15 @@ func (q *Queries) CreateConditionPlatform(ctx context.Context, arg CreateConditi
 	return err
 }
 
-const getAdvertisements = `-- name: GetAdvertisements :many
+const getActiveAdvertisements = `-- name: GetActiveAdvertisements :many
 SELECT advertisement.id,
     title,
     start_at,
     end_at
 FROM advertisement
-WHERE NOT EXISTS (
+WHERE advertisement.start_at < NOW()
+    AND advertisement.end_at > NOW()
+    AND NOT EXISTS (
         SELECT 1
         FROM advertisement_cond
         WHERE advertisement_cond.advertisement_id = advertisement.id
@@ -195,7 +197,9 @@ SELECT advertisement.id,
     start_at,
     end_at
 FROM advertisement
-WHERE EXISTS(
+WHERE advertisement.start_at < NOW()
+    AND advertisement.end_at > NOW()
+    AND EXISTS(
         SELECT 1
         FROM advertisement_cond
         WHERE (
@@ -251,7 +255,7 @@ ORDER BY end_at ASC
 LIMIT ?, ?
 `
 
-type GetAdvertisementsParams struct {
+type GetActiveAdvertisementsParams struct {
 	Age      sql.NullInt32  `json:"age"`
 	Gender   sql.NullString `json:"gender"`
 	Country  sql.NullString `json:"country"`
@@ -260,8 +264,8 @@ type GetAdvertisementsParams struct {
 	Limit    int32          `json:"limit"`
 }
 
-func (q *Queries) GetAdvertisements(ctx context.Context, arg GetAdvertisementsParams) ([]Advertisement, error) {
-	rows, err := q.db.QueryContext(ctx, getAdvertisements,
+func (q *Queries) GetActiveAdvertisements(ctx context.Context, arg GetActiveAdvertisementsParams) ([]Advertisement, error) {
+	rows, err := q.db.QueryContext(ctx, getActiveAdvertisements,
 		arg.Age,
 		arg.Age,
 		arg.Age,

@@ -104,7 +104,7 @@ func (handler *Handler) GetAdvertisementHandler(ctx *gin.Context) {
 		return
 	}
 
-	ads, err := handler.databaseQueries.GetAdvertisements(ctx, db.GetAdvertisementsParams{
+	ads, err := handler.databaseQueries.GetActiveAdvertisements(ctx, db.GetActiveAdvertisementsParams{
 		Age:      age,
 		Gender:   gender,
 		Country:  country,
