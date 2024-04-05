@@ -10,12 +10,12 @@ import (
 )
 
 type QueryParameters struct {
-	Age      int32  `json:"age" example:"24"`
-	Gender   string `json:"gender" example:"M"`
-	Country  string `json:"country" example:"TW"`
-	Platform string `json:"platform" example:"android"`
-	Offset   int32  `json:"offset" example:"0"`
-	Limit    int32  `json:"limit" example:"5"`
+	Age      int32  `form:"age" example:"24"`
+	Gender   string `form:"gender" example:"M"`
+	Country  string `form:"country" example:"TW"`
+	Platform string `form:"platform" example:"android"`
+	Offset   int32  `form:"offset" example:"0"`
+	Limit    int32  `form:"limit" example:"5"`
 }
 
 // @Summary		列出符合可⽤和匹配⽬標條件的廣告
@@ -104,7 +104,7 @@ func (handler *Handler) GetAdvertisementHandler(ctx *gin.Context) {
 	// find in database
 	ads, err = handler.databaseQueries.GetActiveAdvertisements(ctx, params)
 	if err != nil {
-		log.Println("Database error:", err.Error())
+		log.Println("Database error: :))))", err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}

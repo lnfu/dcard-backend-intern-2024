@@ -1,0 +1,1 @@
+CREATE INDEX idx_adv_cond_covering ON advertisement_cond (advertisement_id, cond_id);

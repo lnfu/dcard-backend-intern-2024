@@ -11,12 +11,19 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   redis:
     container_name: dcard_redis
     image: redis:7.2-alpine
     ports:
       - "6379:6379"
-
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 volumes:
   mysql_data: {}

@@ -11,45 +11,6 @@ import (
 	"time"
 )
 
-const checkCountry = `-- name: CheckCountry :one
-SELECT COUNT(*)
-FROM country
-WHERE code = ?
-`
-
-func (q *Queries) CheckCountry(ctx context.Context, country string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkCountry, country)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkGender = `-- name: CheckGender :one
-SELECT COUNT(*)
-FROM gender
-WHERE code = ?
-`
-
-func (q *Queries) CheckGender(ctx context.Context, gender string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkGender, gender)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const checkPlatform = `-- name: CheckPlatform :one
-SELECT COUNT(*)
-FROM platform
-WHERE name = ?
-`
-
-func (q *Queries) CheckPlatform(ctx context.Context, platform string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkPlatform, platform)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createAdvertisement = `-- name: CreateAdvertisement :execlastid
 INSERT INTO advertisement (title, start_at, end_at)
 VALUES (
@@ -179,78 +140,48 @@ func (q *Queries) CreateConditionPlatform(ctx context.Context, arg CreateConditi
 }
 
 const getActiveAdvertisements = `-- name: GetActiveAdvertisements :many
-SELECT advertisement.id,
-    title,
-    start_at,
-    end_at
-FROM advertisement
-WHERE advertisement.start_at < NOW()
-    AND advertisement.end_at > NOW()
-    AND NOT EXISTS (
-        SELECT 1
-        FROM advertisement_cond
-        WHERE advertisement_cond.advertisement_id = advertisement.id
-    )
-UNION ALL
-SELECT advertisement.id,
-    title,
-    start_at,
-    end_at
-FROM advertisement
-WHERE advertisement.start_at < NOW()
-    AND advertisement.end_at > NOW()
-    AND EXISTS(
-        SELECT 1
-        FROM advertisement_cond
-        WHERE (
-                advertisement_cond.advertisement_id = advertisement.id
-                AND advertisement_cond.cond_id IN (
-                    SELECT DISTINCT cond.id
-                    FROM cond
-                        LEFT JOIN cond_gender ON cond.id = cond_gender.cond_id
-                        LEFT JOIN cond_country ON cond.id = cond_country.cond_id
-                        LEFT JOIN cond_platform ON cond.id = cond_platform.cond_id
-                        LEFT JOIN gender ON cond_gender.gender_id = gender.id
-                        LEFT JOIN country ON cond_country.country_id = country.id
-                        LEFT JOIN platform ON cond_platform.platform_id = platform.id
-                    WHERE (1 = 1)
-                        AND (
-                            ? IS NULL
-                            OR (
-                                (
-                                    cond.age_start IS NULL
-                                    OR cond.age_start <= ?
-                                )
-                                AND (
-                                    cond.age_end IS NULL
-                                    OR cond.age_end >= ?
-                                )
-                            )
-                        )
-                        AND(
-                            ? IS NULL
-                            OR (
-                                gender.code IS NULL
-                                OR ? = gender.code
-                            )
-                        )
-                        AND(
-                            ? IS NULL
-                            OR (
-                                country.code IS NULL
-                                OR ? = country.code
-                            )
-                        )
-                        AND(
-                            ? IS NULL
-                            OR (
-                                platform.name IS NULL
-                                OR ? = platform.name
-                            )
-                        )
-                )
+SELECT DISTINCT adv.id,
+    adv.title,
+    adv.start_at,
+    adv.end_at
+FROM advertisement adv
+    LEFT JOIN advertisement_cond adc ON adv.id = adc.advertisement_id
+    LEFT JOIN cond ON adc.cond_id = cond.id
+    LEFT JOIN cond_gender ON cond.id = cond_gender.cond_id
+    LEFT JOIN gender ON cond_gender.gender_id = gender.id
+    LEFT JOIN cond_country ON cond.id = cond_country.cond_id
+    LEFT JOIN country ON cond_country.country_id = country.id
+    LEFT JOIN cond_platform ON cond.id = cond_platform.cond_id
+    LEFT JOIN platform ON cond_platform.platform_id = platform.id
+WHERE (
+        ? IS NULL
+        OR (
+            (
+                cond.age_start IS NULL
+                OR cond.age_start <= ?
             )
+            AND (
+                cond.age_end IS NULL
+                OR cond.age_end >= ?
+            )
+        )
     )
+    AND (
+        ? IS NULL
+        OR gender.code = ?
+        OR cond_gender.cond_id IS NULL
+    )
+    AND (
+        ? IS NULL
+        OR country.code = ?
+        OR cond_country.cond_id IS NULL
+    )
+    AND (
+        ? IS NULL
+        OR platform.name = ?
+        OR cond_platform.cond_id IS NULL
+    )
+    OR adc.id IS NULL
 ORDER BY end_at ASC
 LIMIT ?, ?
 `

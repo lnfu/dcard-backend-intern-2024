@@ -74,7 +74,7 @@ func (cache *Cache) SetAdvertisementsToCache(ctx context.Context, params db.GetA
 		return err
 	}
 	key := generateGetAdvertisementsCacheKey(params)
-	err = cache.redisClient.Set(ctx, key, jsonData, time.Minute).Err()
+	err = cache.redisClient.Set(ctx, key, jsonData, time.Minute*5).Err()
 	if err != nil {
 		return err
 	}

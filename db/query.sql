@@ -1,77 +1,47 @@
 --
 -- name: GetActiveAdvertisements :many
-SELECT advertisement.id,
-    title,
-    start_at,
-    end_at
-FROM advertisement
-WHERE advertisement.start_at < NOW()
-    AND advertisement.end_at > NOW()
-    AND NOT EXISTS (
-        SELECT 1
-        FROM advertisement_cond
-        WHERE advertisement_cond.advertisement_id = advertisement.id
-    )
-UNION ALL
-SELECT advertisement.id,
-    title,
-    start_at,
-    end_at
-FROM advertisement
-WHERE advertisement.start_at < NOW()
-    AND advertisement.end_at > NOW()
-    AND EXISTS(
-        SELECT 1
-        FROM advertisement_cond
-        WHERE (
-                advertisement_cond.advertisement_id = advertisement.id
-                AND advertisement_cond.cond_id IN (
-                    SELECT DISTINCT cond.id
-                    FROM cond
-                        LEFT JOIN cond_gender ON cond.id = cond_gender.cond_id
-                        LEFT JOIN cond_country ON cond.id = cond_country.cond_id
-                        LEFT JOIN cond_platform ON cond.id = cond_platform.cond_id
-                        LEFT JOIN gender ON cond_gender.gender_id = gender.id
-                        LEFT JOIN country ON cond_country.country_id = country.id
-                        LEFT JOIN platform ON cond_platform.platform_id = platform.id
-                    WHERE (1 = 1)
-                        AND (
-                            sqlc.narg(age) IS NULL
-                            OR (
-                                (
-                                    cond.age_start IS NULL
-                                    OR cond.age_start <= sqlc.narg(age)
-                                )
-                                AND (
-                                    cond.age_end IS NULL
-                                    OR cond.age_end >= sqlc.narg(age)
-                                )
-                            )
-                        )
-                        AND(
-                            sqlc.narg(gender) IS NULL
-                            OR (
-                                gender.code IS NULL
-                                OR sqlc.narg(gender) = gender.code
-                            )
-                        )
-                        AND(
-                            sqlc.narg(country) IS NULL
-                            OR (
-                                country.code IS NULL
-                                OR sqlc.narg(country) = country.code
-                            )
-                        )
-                        AND(
-                            sqlc.narg(platform) IS NULL
-                            OR (
-                                platform.name IS NULL
-                                OR sqlc.narg(platform) = platform.name
-                            )
-                        )
-                )
+SELECT DISTINCT adv.id,
+    adv.title,
+    adv.start_at,
+    adv.end_at
+FROM advertisement adv
+    LEFT JOIN advertisement_cond adc ON adv.id = adc.advertisement_id
+    LEFT JOIN cond ON adc.cond_id = cond.id
+    LEFT JOIN cond_gender ON cond.id = cond_gender.cond_id
+    LEFT JOIN gender ON cond_gender.gender_id = gender.id
+    LEFT JOIN cond_country ON cond.id = cond_country.cond_id
+    LEFT JOIN country ON cond_country.country_id = country.id
+    LEFT JOIN cond_platform ON cond.id = cond_platform.cond_id
+    LEFT JOIN platform ON cond_platform.platform_id = platform.id
+WHERE (
+        sqlc.narg(age) IS NULL
+        OR (
+            (
+                cond.age_start IS NULL
+                OR cond.age_start <= sqlc.narg(age)
             )
+            AND (
+                cond.age_end IS NULL
+                OR cond.age_end >= sqlc.narg(age)
+            )
+        )
     )
+    AND (
+        sqlc.narg(gender) IS NULL
+        OR gender.code = sqlc.narg(gender)
+        OR cond_gender.cond_id IS NULL
+    )
+    AND (
+        sqlc.narg(country) IS NULL
+        OR country.code = sqlc.narg(country)
+        OR cond_country.cond_id IS NULL
+    )
+    AND (
+        sqlc.narg(platform) IS NULL
+        OR platform.name = sqlc.narg(platform)
+        OR cond_platform.cond_id IS NULL
+    )
+    OR adc.id IS NULL
 ORDER BY end_at ASC
 LIMIT ?, ?;
 --
@@ -129,21 +99,6 @@ VALUES (
             WHERE name = sqlc.arg(platform)
         )
     );
---
--- name: CheckGender :one
-SELECT COUNT(*)
-FROM gender
-WHERE code = sqlc.arg(gender);
---
--- name: CheckCountry :one
-SELECT COUNT(*)
-FROM country
-WHERE code = sqlc.arg(country);
---
--- name: CheckPlatform :one
-SELECT COUNT(*)
-FROM platform
-WHERE name = sqlc.arg(platform);
 --
 -- name: GetAllGenders :many
 SELECT code
