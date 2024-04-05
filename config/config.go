@@ -34,9 +34,9 @@ func Init(env string) *Config {
 		conf.Database.Driver = "mysql"
 		conf.Database.Source = fmt.Sprintf(
 			"%s:%s@/%s?parseTime=true",
-			os.Getenv("DEV_MYSQL_USER"),
-			os.Getenv("DEV_MYSQL_PASSWORD"),
-			os.Getenv("DEV_MYSQL_DATABASE"),
+			os.Getenv("MYSQL_USER"),
+			os.Getenv("MYSQL_PASSWORD"),
+			os.Getenv("MYSQL_DATABASE"),
 		)
 
 		conf.Redis.Addr = "localhost:6379"
