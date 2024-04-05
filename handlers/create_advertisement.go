@@ -26,13 +26,6 @@ type AdvertisementCondition struct {
 	Platform []string `json:"platform,omitempty" example:"android,ios" swaggertype:"array,string" extensions:"x-order=4"`
 }
 
-func NewInvalidQueryParameterError(parameterName, reason string) InvalidQueryParameterError {
-	return InvalidQueryParameterError{
-		ParameterName: parameterName,
-		Reason:        reason,
-	}
-}
-
 // @Summary		產⽣廣告資源
 // @BasePath	/api/v1
 // @Version		1.0
@@ -62,28 +55,32 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 	}
 
 	for _, condition := range body.Conditions {
-		// 判斷年齡是 1 ~ 100
+		// validate ageStart
 		ageStart := utils.NullInt32FromInt32Pointer(condition.AgeStart)
 		if ageStart.Valid && ageStart.Int32 < 1 || ageStart.Int32 > 100 {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": NewInvalidQueryParameterError("ageStart", "must be between 1 and 100").Error()})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ageStart value (must be 1 ~ 100)"})
 			return
 		}
+
+		// validate ageEnd
 		ageEnd := utils.NullInt32FromInt32Pointer(condition.AgeEnd)
 		if ageEnd.Valid && ageEnd.Int32 < 1 || ageEnd.Int32 > 100 {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": NewInvalidQueryParameterError("ageEnd", "must be between 1 and 100").Error()})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ageEnd value (must be 1 ~ 100)"})
 			return
 		}
-		// 判斷 ageStart <= ageEnd
 		if ageStart.Valid && ageEnd.Valid && ageStart.Int32 > ageEnd.Int32 {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": NewInvalidQueryParameterError("ageEnd", "must be greater than ageStart").Error()})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ageStart value (must be >= ageStart)"})
 			return
 		}
+
+		// add condition
 		conditionId, err := handler.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
 			AgeStart: ageStart,
 			AgeEnd:   utils.NullInt32FromInt32Pointer(condition.AgeEnd),
 		})
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Println("Database error:", err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
 
@@ -94,12 +91,15 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 				return
 			}
 
+			// add gender-condition relation
 			err = handler.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
 				ConditionID: int32(conditionId),
 				Gender:      gender,
 			})
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Println("Database error:", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				return
 			}
 		}
 
@@ -110,36 +110,45 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 				return
 			}
 
+			// add country-condition relation
 			err = handler.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
 				ConditionID: int32(conditionId),
 				Country:     country,
 			})
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Println("Database error:", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				return
 			}
 		}
 
 		for _, platform := range condition.Platform {
-			// 判斷 platform 在 cache/db 中有資料
+			// validate platform
 			if !handler.platformSet.Contains(platform) {
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid platform value"})
 				return
 			}
 
+			// add platform-condition relation
 			err = handler.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
 				ConditionID: int32(conditionId),
 				Platform:    platform,
 			})
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Println("Database error:", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				return
 			}
 		}
+
+		// add condition-advertisement relation
 		err = handler.databaseQueries.CreateAdvertisementCondition(ctx, db.CreateAdvertisementConditionParams{
 			AdvertisementID: int32(advertisementId),
 			ConditionID:     int32(conditionId),
 		})
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Println("Database error:", err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
 	}

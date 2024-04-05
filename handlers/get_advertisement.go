@@ -2,79 +2,20 @@ package handlers
 
 import (
 	"database/sql"
-	"errors"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/lnfu/dcard-intern/db/sqlc"
-
-	"github.com/lnfu/dcard-intern/utils"
 )
 
-func (handler *Handler) getAdvertisementQueryParameters(ctx *gin.Context) (sql.NullInt32, sql.NullString, sql.NullString, sql.NullString, int, int, error) {
-	// TODO 關於 database 的錯誤理論上應該是回 internal server error
-	var (
-		age                       sql.NullInt32
-		gender, country, platform sql.NullString
-		offset                    int = 0
-		limit                     int = 5
-		err                       error
-	)
-
-	age, err = utils.NullInt32FromString(ctx.Query("age"))
-	if err != nil {
-		return age, gender, country, platform, offset, limit, err
-	}
-	if age.Valid && age.Int32 < 1 || age.Int32 > 100 {
-		return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("age", "must be between 1 and 100")
-	}
-	gender = utils.NonEmptyNullStringFromString(ctx.Query("gender"))
-	if gender.Valid {
-		// validate gender
-		if !handler.genderSet.Contains(gender.String) {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid gender value"})
-			return age, gender, country, platform, offset, limit, errors.New("")
-		}
-	}
-	country = utils.NonEmptyNullStringFromString(ctx.Query("country"))
-	if country.Valid {
-		// validate country
-		if !handler.countrySet.Contains(country.String) {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid country value"})
-			return age, gender, country, platform, offset, limit, errors.New("")
-		}
-	}
-	platform = utils.NonEmptyNullStringFromString(ctx.Query("platform"))
-	if platform.Valid {
-		// validate platform
-		if !handler.platformSet.Contains(platform.String) {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid platform value"})
-			return age, gender, country, platform, offset, limit, errors.New("")
-		}
-	}
-
-	if offset_str := ctx.Query("offset"); offset_str != "" {
-		offset, err = strconv.Atoi(offset_str)
-		if err != nil {
-			return age, gender, country, platform, offset, limit, err
-		}
-		if offset < 0 {
-			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("offset", "must be >= 0")
-		}
-	}
-
-	if limit_str := ctx.Query("limit"); limit_str != "" {
-		limit, err = strconv.Atoi(limit_str)
-		if err != nil {
-			return age, gender, country, platform, offset, limit, err
-		}
-		if limit < 0 {
-			return age, gender, country, platform, offset, limit, NewInvalidQueryParameterError("limit", "must be >= 0")
-		}
-	}
-	return age, gender, country, platform, offset, limit, nil
+type QueryParameters struct {
+	Age      int32  `json:"age" example:"24"`
+	Gender   string `json:"gender" example:"M"`
+	Country  string `json:"country" example:"TW"`
+	Platform string `json:"platform" example:"android"`
+	Offset   int32  `json:"offset" example:"0"`
+	Limit    int32  `json:"limit" example:"5"`
 }
 
 // @Summary		列出符合可⽤和匹配⽬標條件的廣告
@@ -90,21 +31,68 @@ func (handler *Handler) getAdvertisementQueryParameters(ctx *gin.Context) (sql.N
 // @Tags		advertisement
 // @Router		/ad [get]
 func (handler *Handler) GetAdvertisementHandler(ctx *gin.Context) {
-	age, gender, country, platform, offset, limit, err := handler.getAdvertisementQueryParameters(ctx)
-	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var queryParameters QueryParameters
+	if err := ctx.ShouldBindQuery(&queryParameters); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	params := db.GetActiveAdvertisementsParams{
-		Age:      age,
-		Gender:   gender,
-		Country:  country,
-		Platform: platform,
-		Offset:   int32(offset),
-		Limit:    int32(limit),
+
+	var params db.GetActiveAdvertisementsParams
+
+	// age
+	if queryParameters.Age < 0 || queryParameters.Age > 100 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid age value (must be 1 ~ 100)"})
+		return
+	} else if queryParameters.Age == 0 {
+		params.Age = sql.NullInt32{Int32: 0, Valid: false}
+	} else {
+		params.Age = sql.NullInt32{Int32: queryParameters.Age, Valid: true}
 	}
 
-	// search cache
+	// gender
+	if queryParameters.Gender == "" {
+		params.Gender = sql.NullString{String: "", Valid: false}
+	} else if !handler.genderSet.Contains(queryParameters.Gender) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid gender value"})
+		return
+	} else {
+		params.Gender = sql.NullString{String: queryParameters.Gender, Valid: true}
+	}
+
+	// country
+	if queryParameters.Country == "" {
+		params.Country = sql.NullString{String: "", Valid: false}
+	} else if !handler.countrySet.Contains(queryParameters.Country) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid country value"})
+		return
+	} else {
+		params.Country = sql.NullString{String: queryParameters.Country, Valid: true}
+	}
+
+	// platform
+	if queryParameters.Platform == "" {
+		params.Platform = sql.NullString{String: "", Valid: false}
+	} else if !handler.platformSet.Contains(queryParameters.Platform) {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid platform value"})
+		return
+	} else {
+		params.Platform = sql.NullString{String: queryParameters.Platform, Valid: true}
+	}
+
+	// offset
+	params.Offset = queryParameters.Offset
+
+	// limit
+	if queryParameters.Limit == 0 {
+		params.Limit = 5
+	} else if queryParameters.Limit < 1 || queryParameters.Limit > 100 {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit value (must be 1 ~ 100)"})
+		return
+	} else {
+		params.Limit = queryParameters.Limit
+	}
+
+	// find in cache
 	ads, err := handler.cac.GetAdvertisementsFromCache(ctx, params)
 	if err == nil {
 		ctx.JSON(http.StatusOK, gin.H{
@@ -113,15 +101,19 @@ func (handler *Handler) GetAdvertisementHandler(ctx *gin.Context) {
 		return
 	}
 
-	// search database
+	// find in database
 	ads, err = handler.databaseQueries.GetActiveAdvertisements(ctx, params)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Println("Database error:", err.Error())
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
+	// add cache
 	err = handler.cac.SetAdvertisementsToCache(ctx, params, ads)
 	if err != nil {
-		log.Fatalf("Redis: 無法新增 Cache (%v)\n", err)
+		log.Println("Cache error:", err.Error())
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Cache error"})
+		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{

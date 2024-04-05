@@ -78,6 +78,5 @@ func (cache *Cache) SetAdvertisementsToCache(ctx context.Context, params db.GetA
 	if err != nil {
 		return err
 	}
-	log.Printf("Redis: 新增快取 key = %v\n", key)
 	return nil
 }
