@@ -14,20 +14,15 @@ import (
 
 var ctx = context.Background()
 
-const ( // TODO 用一個 config.go 來管理
-	redisAddr     = "localhost:6379"
-	redisPassword = ""
-)
-
 type Cache struct {
 	redisClient *redis.Client
 }
 
-func NewCache() *Cache {
+func NewCache(addr string, password string, db int) *Cache {
 	client := redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       0,
+		Addr:     addr,
+		Password: password,
+		DB:       db,
 	})
 	pong, err := client.Ping(ctx).Result()
 	if err != nil {

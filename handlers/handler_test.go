@@ -19,6 +19,11 @@ const (
 	dbSource = "web:pass@/dcard?parseTime=true"
 )
 
+const ( // TODO 用一個 config.go 來管理
+	redisAddr     = "localhost:6379"
+	redisPassword = ""
+)
+
 func Test_application_getAdvertisementFilters(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -29,7 +34,7 @@ func Test_application_getAdvertisementFilters(t *testing.T) {
 	}
 	defer dbConnection.Close()
 
-	cac := cache.NewCache()
+	cac := cache.NewCache(redisAddr, redisPassword, 0)
 	handler := NewHandler(db.New(dbConnection), cac)
 
 	tests := []struct {
