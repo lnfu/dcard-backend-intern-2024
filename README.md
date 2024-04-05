@@ -27,3 +27,7 @@ make docker-up
 make migrate-up
 go run .
 ```
+
+![database design](docs/database_design.png)
+
+![k6 result](docs/k6_result.png)
