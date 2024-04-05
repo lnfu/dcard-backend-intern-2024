@@ -54,46 +54,6 @@ func generateGetAdvertisementsCacheKey(params db.GetActiveAdvertisementsParams) 
 	return strings.Join(components, "|")
 }
 
-func (cache *Cache) isElementInCachedSet(ctx context.Context, key string, value string) (bool, error) {
-	exist, err := cache.redisClient.SIsMember(ctx, key, value).Result()
-	if err != nil {
-		return false, err
-	}
-	return exist, nil
-}
-
-func (cache *Cache) addElementToCachedSet(ctx context.Context, key string, value string) error {
-	err := cache.redisClient.SAdd(ctx, key, value).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (cache *Cache) IsGenderInCachedSet(ctx context.Context, code string) (bool, error) {
-	return cache.isElementInCachedSet(ctx, "gender", code)
-}
-
-func (cache *Cache) AddGenderToCachedSet(ctx context.Context, code string) error {
-	return cache.addElementToCachedSet(ctx, "gender", code)
-}
-
-func (cache *Cache) IsCountryInCachedSet(ctx context.Context, code string) (bool, error) {
-	return cache.isElementInCachedSet(ctx, "country", code)
-}
-
-func (cache *Cache) AddCountryToCachedSet(ctx context.Context, code string) error {
-	return cache.addElementToCachedSet(ctx, "country", code)
-}
-
-func (cache *Cache) IsPlatformInCachedSet(ctx context.Context, name string) (bool, error) {
-	return cache.isElementInCachedSet(ctx, "platform", name)
-}
-
-func (cache *Cache) AddPlatformToCachedSet(ctx context.Context, name string) error {
-	return cache.addElementToCachedSet(ctx, "platform", name)
-}
-
 func (cache *Cache) GetAdvertisementsFromCache(ctx context.Context, params db.GetActiveAdvertisementsParams) ([]db.Advertisement, error) {
 	key := generateGetAdvertisementsCacheKey(params)
 	val, err := cache.redisClient.Get(ctx, key).Result()

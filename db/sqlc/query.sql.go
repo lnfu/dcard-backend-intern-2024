@@ -303,3 +303,87 @@ func (q *Queries) GetActiveAdvertisements(ctx context.Context, arg GetActiveAdve
 	}
 	return items, nil
 }
+
+const getAllCountries = `-- name: GetAllCountries :many
+SELECT code
+FROM country
+`
+
+func (q *Queries) GetAllCountries(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getAllCountries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllGenders = `-- name: GetAllGenders :many
+SELECT code
+FROM gender
+`
+
+func (q *Queries) GetAllGenders(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getAllGenders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var code string
+		if err := rows.Scan(&code); err != nil {
+			return nil, err
+		}
+		items = append(items, code)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllPlatforms = `-- name: GetAllPlatforms :many
+SELECT name
+FROM platform
+`
+
+func (q *Queries) GetAllPlatforms(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getAllPlatforms)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

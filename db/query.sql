@@ -144,3 +144,15 @@ WHERE code = sqlc.arg(country);
 SELECT COUNT(*)
 FROM platform
 WHERE name = sqlc.arg(platform);
+--
+-- name: GetAllGenders :many
+SELECT code
+FROM gender;
+--
+-- name: GetAllCountries :many
+SELECT code
+FROM country;
+--
+-- name: GetAllPlatforms :many
+SELECT name
+FROM platform;
