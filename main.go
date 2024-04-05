@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -14,6 +15,8 @@ import (
 	"github.com/lnfu/dcard-intern/handlers"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 // @title Dcard Backend Intern 2024
@@ -22,7 +25,8 @@ import (
 // @Host localhost:8080
 func main() {
 	// Config
-	conf := config.Init()
+	env := os.Getenv("ENV")
+	conf := config.Init(env)
 
 	// Command-Line Flags
 	addr := flag.String("addr", conf.Address, "HTTP network address")

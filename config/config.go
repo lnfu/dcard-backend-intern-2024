@@ -1,5 +1,10 @@
 package config
 
+import (
+	"fmt"
+	"os"
+)
+
 type Config struct {
 	Address  string
 	Database Database
@@ -19,18 +24,25 @@ type Redis struct {
 
 // TODO 讀取 dotenv (https://blog.wu-boy.com/2019/04/how-to-load-env-file-in-go/)
 
-func Init() *Config {
-	// TODO 區分 dev/test/prod
-	dev := Config{}
+func Init(env string) *Config {
+	conf := Config{}
 
-	dev.Address = ":8080"
+	switch env {
+	case "dev":
+		conf.Address = ":8080"
 
-	dev.Database.Driver = "mysql"
-	dev.Database.Source = "web:pass@/dcard?parseTime=true"
+		conf.Database.Driver = "mysql"
+		conf.Database.Source = fmt.Sprintf(
+			"%s:%s@/%s?parseTime=true",
+			os.Getenv("DEV_MYSQL_USER"),
+			os.Getenv("DEV_MYSQL_PASSWORD"),
+			os.Getenv("DEV_MYSQL_DATABASE"),
+		)
 
-	dev.Redis.Addr = "localhost:6379"
-	dev.Redis.Password = ""
-	dev.Redis.DB = 0
+		conf.Redis.Addr = "localhost:6379"
+		conf.Redis.Password = ""
+		conf.Redis.DB = 0
+	}
 
-	return &dev
+	return &conf
 }

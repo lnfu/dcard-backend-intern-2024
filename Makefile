@@ -1,9 +1,11 @@
+include .env
+
 docker-up:
-	sudo docker compose up -d
+	sudo docker compose --profile $(ENV) up -d
 docker-down:
-	sudo docker compose down
+	sudo docker compose --profile $(ENV) down
 docker-reset-down:
-	sudo docker compose down -v
+	sudo docker compose --profile $(ENV) down -v
 docker-bash:
 	sudo docker exec -it dcard_mysql bash
 docker-mysql:
