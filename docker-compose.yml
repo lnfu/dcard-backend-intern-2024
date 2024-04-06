@@ -24,6 +24,6 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 1G
 volumes:
   mysql_data: {}
