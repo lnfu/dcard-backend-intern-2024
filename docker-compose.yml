@@ -11,8 +11,8 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-    # ports:
-    #   - "3306:3306"
+    ports:
+      - "3306:3306"
     deploy:
       resources:
         limits:
@@ -32,8 +32,8 @@ services:
     container_name: dcard_redis
     image: redis:7.2-alpine
     restart: always
-    # ports:
-    #   - "6379:6379"
+    ports:
+      - "6379:6379"
     deploy:
       resources:
         limits:
@@ -55,6 +55,6 @@ services:
       - mysql
       - redis
       - migrate
-    
+
 volumes:
   mysql_data: {}
