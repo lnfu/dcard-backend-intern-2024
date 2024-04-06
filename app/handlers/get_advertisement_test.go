@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
 
 	mapset "github.com/deckarep/golang-set/v2"
+	db "github.com/lnfu/dcard-intern/app/models/sqlc"
 )
 
 func Int32Ptr(i int32) *int32    { return &i }
@@ -157,6 +159,146 @@ func TestHandler_validateQueryParameters(t *testing.T) {
 			}
 			if err != nil && tc.expectedError != nil && err.Error() != tc.expectedError.Error() {
 				t.Errorf("expected error: %v, got: %v", tc.expectedError, err)
+			}
+		})
+	}
+}
+
+func TestHandler_buildDBParams(t *testing.T) {
+	handler := &Handler{}
+
+	tests := []struct {
+		name            string
+		queryParameters QueryParameters
+		expectedParams  db.GetActiveAdvertisementsParams
+	}{
+		{
+			name: "valid (all)",
+			queryParameters: QueryParameters{
+				Age:      Int32Ptr(25),
+				Gender:   StringPtr("M"),
+				Country:  StringPtr("TW"),
+				Platform: StringPtr("android"),
+				Offset:   Int32Ptr(0),
+				Limit:    Int32Ptr(5),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Int32: 25, Valid: true},
+				Gender:   sql.NullString{String: "M", Valid: true},
+				Country:  sql.NullString{String: "TW", Valid: true},
+				Platform: sql.NullString{String: "android", Valid: true},
+				Offset:   0,
+				Limit:    5,
+			},
+		},
+		{
+			name: "only age",
+			queryParameters: QueryParameters{
+				Age: Int32Ptr(30),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Int32: 30, Valid: true},
+				Gender:   sql.NullString{Valid: false},
+				Country:  sql.NullString{Valid: false},
+				Platform: sql.NullString{Valid: false},
+				Offset:   0, // 預設值
+				Limit:    5, // 預設值
+			},
+		},
+		{
+			name: "only gender",
+			queryParameters: QueryParameters{
+				Gender: StringPtr("M"),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Valid: false},
+				Gender:   sql.NullString{String: "M", Valid: true},
+				Country:  sql.NullString{Valid: false},
+				Platform: sql.NullString{Valid: false},
+				Offset:   0, // 預設值
+				Limit:    5, // 預設值
+			},
+		},
+		{
+			name: "only country",
+			queryParameters: QueryParameters{
+				Country: StringPtr("TW"),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Valid: false},
+				Gender:   sql.NullString{Valid: false},
+				Country:  sql.NullString{String: "TW", Valid: true},
+				Platform: sql.NullString{Valid: false},
+				Offset:   0, // 預設值
+				Limit:    5, // 預設值
+			},
+		},
+		{
+			name: "only platform",
+			queryParameters: QueryParameters{
+				Platform: StringPtr("android"),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Valid: false},
+				Gender:   sql.NullString{Valid: false},
+				Country:  sql.NullString{Valid: false},
+				Platform: sql.NullString{String: "android", Valid: true},
+				Offset:   0, // 預設值
+				Limit:    5, // 預設值
+			},
+		},
+		{
+			name: "only offset",
+			queryParameters: QueryParameters{
+				Offset: Int32Ptr(12),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Valid: false},
+				Gender:   sql.NullString{Valid: false},
+				Country:  sql.NullString{Valid: false},
+				Platform: sql.NullString{Valid: false},
+				Offset:   12,
+				Limit:    5, // 預設值
+			},
+		},
+		{
+			name: "only limit",
+			queryParameters: QueryParameters{
+				Limit: Int32Ptr(20),
+			},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Valid: false},
+				Gender:   sql.NullString{Valid: false},
+				Country:  sql.NullString{Valid: false},
+				Platform: sql.NullString{Valid: false},
+				Offset:   0, // 預設值
+				Limit:    20,
+			},
+		},
+		{
+			name:            "empty",
+			queryParameters: QueryParameters{},
+			expectedParams: db.GetActiveAdvertisementsParams{
+				Age:      sql.NullInt32{Valid: false},
+				Gender:   sql.NullString{Valid: false},
+				Country:  sql.NullString{Valid: false},
+				Platform: sql.NullString{Valid: false},
+				Offset:   0, // 預設值
+				Limit:    5, // 預設值
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			params := handler.buildDBParams(test.queryParameters)
+			if params.Age != test.expectedParams.Age ||
+				params.Gender != test.expectedParams.Gender ||
+				params.Country != test.expectedParams.Country ||
+				params.Platform != test.expectedParams.Platform ||
+				params.Offset != test.expectedParams.Offset ||
+				params.Limit != test.expectedParams.Limit {
+				t.Errorf("expected: %+v, got: %+v", test.expectedParams, params)
 			}
 		})
 	}
