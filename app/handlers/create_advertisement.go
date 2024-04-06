@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -54,42 +55,25 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		return
 	}
 
+	// process conditions
 	for _, condition := range body.Conditions {
-		// validate ageStart
-		ageStart := utils.NullInt32FromInt32Pointer(condition.AgeStart)
-		if ageStart.Valid && ageStart.Int32 < 1 || ageStart.Int32 > 100 {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ageStart value (must be 1 ~ 100)"})
-			return
-		}
-
-		// validate ageEnd
-		ageEnd := utils.NullInt32FromInt32Pointer(condition.AgeEnd)
-		if ageEnd.Valid && ageEnd.Int32 < 1 || ageEnd.Int32 > 100 {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ageEnd value (must be 1 ~ 100)"})
-			return
-		}
-		if ageStart.Valid && ageEnd.Valid && ageStart.Int32 > ageEnd.Int32 {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ageStart value (must be >= ageStart)"})
-			return
+		if err := handler.validateCondition(condition); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		}
 
 		// add condition
 		conditionId, err := handler.databaseQueries.CreateCondition(ctx, sqlc.CreateConditionParams{
-			AgeStart: ageStart,
+			AgeStart: utils.NullInt32FromInt32Pointer(condition.AgeStart),
 			AgeEnd:   utils.NullInt32FromInt32Pointer(condition.AgeEnd),
 		})
+
 		if err != nil {
-			log.Println("Database error:", err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			log.Println("Database Error:", err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 			return
 		}
 
 		for _, gender := range condition.Gender {
-			// validate gender
-			if !handler.genderSet.Contains(gender) {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid gender value"})
-				return
-			}
 
 			// add gender-condition relation
 			err = handler.databaseQueries.CreateConditionGender(ctx, sqlc.CreateConditionGenderParams{
@@ -97,18 +81,13 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 				Gender:      gender,
 			})
 			if err != nil {
-				log.Println("Database error:", err.Error())
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				log.Println("Database Error:", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 				return
 			}
 		}
 
 		for _, country := range condition.Country {
-			// validate country
-			if !handler.countrySet.Contains(country) {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid country value"})
-				return
-			}
 
 			// add country-condition relation
 			err = handler.databaseQueries.CreateConditionCountry(ctx, sqlc.CreateConditionCountryParams{
@@ -116,18 +95,13 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 				Country:     country,
 			})
 			if err != nil {
-				log.Println("Database error:", err.Error())
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				log.Println("Database Error:", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 				return
 			}
 		}
 
 		for _, platform := range condition.Platform {
-			// validate platform
-			if !handler.platformSet.Contains(platform) {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid platform value"})
-				return
-			}
 
 			// add platform-condition relation
 			err = handler.databaseQueries.CreateConditionPlatform(ctx, sqlc.CreateConditionPlatformParams{
@@ -135,8 +109,8 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 				Platform:    platform,
 			})
 			if err != nil {
-				log.Println("Database error:", err.Error())
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				log.Println("Database Error:", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 				return
 			}
 		}
@@ -147,8 +121,8 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 			ConditionID:     int32(conditionId),
 		})
 		if err != nil {
-			log.Println("Database error:", err.Error())
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			log.Println("Database Error:", err.Error())
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 			return
 		}
 	}
@@ -156,4 +130,39 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"status": "ok",
 	})
+}
+
+func (handler *Handler) validateCondition(condition AdvertisementCondition) error {
+	// ageStart
+	if condition.AgeStart != nil && (*condition.AgeStart < 1 || *condition.AgeStart > 100) {
+		return errors.New("invalid ageStart value (must be 1 ~ 100)")
+	}
+
+	// ageEnd
+	if condition.AgeEnd != nil && (*condition.AgeEnd < 1 || *condition.AgeEnd > 100) {
+		return errors.New("invalid ageEnd value (must be 1 ~ 100)")
+	}
+
+	// gender
+	for _, gender := range condition.Gender {
+		if !handler.genderSet.Contains(gender) {
+			return errors.New("invalid gender value")
+		}
+	}
+
+	// country
+	for _, country := range condition.Country {
+		if !handler.countrySet.Contains(country) {
+			return errors.New("invalid country value")
+		}
+	}
+
+	// platform
+	for _, platform := range condition.Platform {
+		if !handler.platformSet.Contains(platform) {
+			return errors.New("invalid platform value")
+		}
+	}
+
+	return nil
 }
