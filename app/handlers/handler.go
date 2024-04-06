@@ -7,20 +7,20 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/lnfu/dcard-intern/app/cache"
-	db "github.com/lnfu/dcard-intern/app/models/sqlc"
+	sqlc "github.com/lnfu/dcard-intern/app/models/sqlc"
 )
 
 var ctx = context.Background()
 
 type Handler struct {
-	databaseQueries *db.Queries
+	databaseQueries *sqlc.Queries
 	cac             *cache.Cache
 	genderSet       mapset.Set[string]
 	countrySet      mapset.Set[string]
 	platformSet     mapset.Set[string]
 }
 
-func NewHandler(db *db.Queries, cac *cache.Cache) *Handler {
+func NewHandler(db *sqlc.Queries, cac *cache.Cache) *Handler {
 	genders, err := db.GetAllGenders(ctx)
 	if err != nil {
 		log.Fatalln("Database error", err.Error())

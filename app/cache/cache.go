@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	db "github.com/lnfu/dcard-intern/app/models/sqlc"
+	sqlc "github.com/lnfu/dcard-intern/app/models/sqlc"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -33,7 +33,7 @@ func NewCache(addr string, password string, db int) *Cache {
 	return &Cache{client}
 }
 
-func generateGetAdvertisementsCacheKey(params db.GetActiveAdvertisementsParams) string {
+func generateGetAdvertisementsCacheKey(params sqlc.GetActiveAdvertisementsParams) string {
 	components := make([]string, 0)
 	if params.Age.Valid {
 		components = append(components, fmt.Sprintf("age:%d", params.Age.Int32))
@@ -54,21 +54,21 @@ func generateGetAdvertisementsCacheKey(params db.GetActiveAdvertisementsParams) 
 	return strings.Join(components, "|")
 }
 
-func (cache *Cache) GetAdvertisementsFromCache(ctx context.Context, params db.GetActiveAdvertisementsParams) ([]db.Advertisement, error) {
+func (cache *Cache) GetAdvertisementsFromCache(ctx context.Context, params sqlc.GetActiveAdvertisementsParams) ([]sqlc.Advertisement, error) {
 	key := generateGetAdvertisementsCacheKey(params)
 	val, err := cache.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	var ads []db.Advertisement
+	var ads []sqlc.Advertisement
 	if err := json.Unmarshal([]byte(val), &ads); err != nil {
 		return nil, err
 	}
 	return ads, nil
 }
 
-func (cache *Cache) SetAdvertisementsToCache(ctx context.Context, params db.GetActiveAdvertisementsParams, ads []db.Advertisement) error {
+func (cache *Cache) SetAdvertisementsToCache(ctx context.Context, params sqlc.GetActiveAdvertisementsParams, ads []sqlc.Advertisement) error {
 	jsonData, err := json.Marshal(ads)
 	if err != nil {
 		return err

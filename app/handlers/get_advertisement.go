@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	db "github.com/lnfu/dcard-intern/app/models/sqlc"
+	sqlc "github.com/lnfu/dcard-intern/app/models/sqlc"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/gin-gonic/gin"
@@ -93,8 +93,8 @@ func (handler *Handler) validateQueryParameters(queryParameters QueryParameters)
 }
 
 // query parameters -> db parameters (如果是空的設定 null)
-func (handler *Handler) buildDBParams(queryParameters QueryParameters) db.GetActiveAdvertisementsParams {
-	var params db.GetActiveAdvertisementsParams
+func (handler *Handler) buildDBParams(queryParameters QueryParameters) sqlc.GetActiveAdvertisementsParams {
+	var params sqlc.GetActiveAdvertisementsParams
 
 	// age
 	params.Age = utils.NullInt32FromInt32Pointer(queryParameters.Age)
@@ -122,8 +122,8 @@ func (handler *Handler) buildDBParams(queryParameters QueryParameters) db.GetAct
 }
 
 // 從 cache/database 獲取符合條件的 advertisement
-func (handler *Handler) retrieveAdvertisements(params db.GetActiveAdvertisementsParams) ([]db.Advertisement, error) {
-	var ads []db.Advertisement
+func (handler *Handler) retrieveAdvertisements(params sqlc.GetActiveAdvertisementsParams) ([]sqlc.Advertisement, error) {
+	var ads []sqlc.Advertisement
 
 	// find in cache
 	ads, err := handler.cac.GetAdvertisementsFromCache(ctx, params)

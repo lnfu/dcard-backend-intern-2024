@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	db "github.com/lnfu/dcard-intern/app/models/sqlc"
+	sqlc "github.com/lnfu/dcard-intern/app/models/sqlc"
 
 	"github.com/lnfu/dcard-intern/app/utils"
 )
@@ -43,7 +43,7 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 	}
 
 	// add ad to database
-	advertisementId, err := handler.databaseQueries.CreateAdvertisement(ctx, db.CreateAdvertisementParams{
+	advertisementId, err := handler.databaseQueries.CreateAdvertisement(ctx, sqlc.CreateAdvertisementParams{
 		Title:   body.Title,
 		StartAt: body.StartAt,
 		EndAt:   body.EndAt,
@@ -74,7 +74,7 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		}
 
 		// add condition
-		conditionId, err := handler.databaseQueries.CreateCondition(ctx, db.CreateConditionParams{
+		conditionId, err := handler.databaseQueries.CreateCondition(ctx, sqlc.CreateConditionParams{
 			AgeStart: ageStart,
 			AgeEnd:   utils.NullInt32FromInt32Pointer(condition.AgeEnd),
 		})
@@ -92,7 +92,7 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 			}
 
 			// add gender-condition relation
-			err = handler.databaseQueries.CreateConditionGender(ctx, db.CreateConditionGenderParams{
+			err = handler.databaseQueries.CreateConditionGender(ctx, sqlc.CreateConditionGenderParams{
 				ConditionID: int32(conditionId),
 				Gender:      gender,
 			})
@@ -111,7 +111,7 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 			}
 
 			// add country-condition relation
-			err = handler.databaseQueries.CreateConditionCountry(ctx, db.CreateConditionCountryParams{
+			err = handler.databaseQueries.CreateConditionCountry(ctx, sqlc.CreateConditionCountryParams{
 				ConditionID: int32(conditionId),
 				Country:     country,
 			})
@@ -130,7 +130,7 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 			}
 
 			// add platform-condition relation
-			err = handler.databaseQueries.CreateConditionPlatform(ctx, db.CreateConditionPlatformParams{
+			err = handler.databaseQueries.CreateConditionPlatform(ctx, sqlc.CreateConditionPlatformParams{
 				ConditionID: int32(conditionId),
 				Platform:    platform,
 			})
@@ -142,7 +142,7 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		}
 
 		// add condition-advertisement relation
-		err = handler.databaseQueries.CreateAdvertisementCondition(ctx, db.CreateAdvertisementConditionParams{
+		err = handler.databaseQueries.CreateAdvertisementCondition(ctx, sqlc.CreateAdvertisementConditionParams{
 			AdvertisementID: int32(advertisementId),
 			ConditionID:     int32(conditionId),
 		})
