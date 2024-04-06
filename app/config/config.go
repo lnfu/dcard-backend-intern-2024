@@ -22,8 +22,6 @@ type Redis struct {
 	DB       int
 }
 
-// TODO 讀取 dotenv (https://blog.wu-boy.com/2019/04/how-to-load-env-file-in-go/)
-
 func Init(env string) *Config {
 	conf := Config{}
 
