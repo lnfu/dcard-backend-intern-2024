@@ -19,8 +19,8 @@ type Advertisement struct {
 }
 
 type AdvertisementCondition struct {
-	AgeStart *int     `json:"ageStart,omitempty" example:"20" swaggertype:"integer" extensions:"x-order=0"`
-	AgeEnd   *int     `json:"ageEnd,omitempty" example:"30" swaggertype:"integer" extensions:"x-order=1"`
+	AgeStart *int32   `json:"ageStart,omitempty" example:"20" swaggertype:"integer" extensions:"x-order=0"`
+	AgeEnd   *int32   `json:"ageEnd,omitempty" example:"30" swaggertype:"integer" extensions:"x-order=1"`
 	Gender   []string `json:"gender,omitempty" example:"M" swaggertype:"array,string" extensions:"x-order=2"`
 	Country  []string `json:"country,omitempty" example:"TW,JP" swaggertype:"array,string" extensions:"x-order=3"`
 	Platform []string `json:"platform,omitempty" example:"android,ios" swaggertype:"array,string" extensions:"x-order=4"`
