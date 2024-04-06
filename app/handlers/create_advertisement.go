@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	db "github.com/lnfu/dcard-intern/app/db/sqlc"
+	db "github.com/lnfu/dcard-intern/app/models/sqlc"
 
 	"github.com/lnfu/dcard-intern/app/utils"
 )

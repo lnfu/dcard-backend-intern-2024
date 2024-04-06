@@ -8,15 +8,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/lnfu/dcard-intern/cache"
-	"github.com/lnfu/dcard-intern/config"
-	db "github.com/lnfu/dcard-intern/db/sqlc"
-	docs "github.com/lnfu/dcard-intern/docs"
-	"github.com/lnfu/dcard-intern/handlers"
+	"github.com/joho/godotenv"
+	"github.com/lnfu/dcard-intern/app/cache"
+	"github.com/lnfu/dcard-intern/app/config"
+	docs "github.com/lnfu/dcard-intern/app/docs"
+	"github.com/lnfu/dcard-intern/app/handlers"
+	models "github.com/lnfu/dcard-intern/app/models/sqlc"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-
-	_ "github.com/joho/godotenv/autoload"
 )
 
 // @title Dcard Backend Intern 2024
@@ -25,6 +24,7 @@ import (
 // @Host localhost:8080
 func main() {
 	// Config
+	godotenv.Load("../.env")
 	env := os.Getenv("ENV")
 	conf := config.Init(env)
 
@@ -46,7 +46,7 @@ func main() {
 	router := newRouter()
 
 	// Handlers
-	handler := handlers.NewHandler(db.New(dbConnection), cac)
+	handler := handlers.NewHandler(models.New(dbConnection), cac)
 	apiV1 := router.Group("api/v1/")
 	apiV1.POST("ad", handler.CreateAdvertisementHandler)
 	apiV1.GET("ad", handler.GetAdvertisementHandler)

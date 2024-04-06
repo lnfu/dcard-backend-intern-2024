@@ -7,7 +7,7 @@ import (
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/lnfu/dcard-intern/app/cache"
-	db "github.com/lnfu/dcard-intern/app/db/sqlc"
+	db "github.com/lnfu/dcard-intern/app/models/sqlc"
 )
 
 var ctx = context.Background()

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	db "github.com/lnfu/dcard-intern/app/db/sqlc"
+	db "github.com/lnfu/dcard-intern/app/models/sqlc"
 	"github.com/redis/go-redis/v9"
 )
 

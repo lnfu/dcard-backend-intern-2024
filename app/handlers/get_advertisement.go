@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	db "github.com/lnfu/dcard-intern/app/db/sqlc"
+	db "github.com/lnfu/dcard-intern/app/models/sqlc"
 )
 
 type QueryParameters struct {
