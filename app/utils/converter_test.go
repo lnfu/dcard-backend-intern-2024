@@ -41,3 +41,40 @@ func TestNullInt32FromInt32Pointer(t *testing.T) {
 		t.Errorf("Expected %+v, got %+v", expected, got)
 	}
 }
+
+func TestNullStringFromStringPointer(t *testing.T) {
+	input := new(string)
+	var got sql.NullString
+	var expected sql.NullString
+
+	// Test case: nil pointer should return NullString with Valid=false
+	got = NullStringFromStringPointer(nil)
+	expected = sql.NullString{String: "", Valid: false}
+	if got != expected {
+		t.Errorf("Expected %+v, got %+v", expected, got)
+	}
+
+	// Test case: valid pointer with with string (no space) should return NullInt32 with Valid=true
+	*input = "rahmat_erwin_asbdullah"
+	got = NullStringFromStringPointer(input)
+	expected = sql.NullString{String: "rahmat_erwin_asbdullah", Valid: true}
+	if got != expected {
+		t.Errorf("Expected %+v, got %+v", expected, got)
+	}
+
+	// Test case: valid pointer with string (has spaces) should return NullString with Valid=true
+	*input = "rahmat erwin asbdullah"
+	got = NullStringFromStringPointer(input)
+	expected = sql.NullString{String: "rahmat erwin asbdullah", Valid: true}
+	if got != expected {
+		t.Errorf("Expected %+v, got %+v", expected, got)
+	}
+
+	// Test case: valid pointer with string (chinese) should return NullString with Valid=true
+	*input = "天哪這根本就是我"
+	got = NullStringFromStringPointer(input)
+	expected = sql.NullString{String: "天哪這根本就是我", Valid: true}
+	if got != expected {
+		t.Errorf("Expected %+v, got %+v", expected, got)
+	}
+}

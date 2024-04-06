@@ -1,23 +1,24 @@
 package handlers
 
 import (
-	"database/sql"
 	"errors"
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	db "github.com/lnfu/dcard-intern/app/models/sqlc"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/gin-gonic/gin"
+	"github.com/lnfu/dcard-intern/app/utils"
 )
 
 type QueryParameters struct {
-	Age      int32  `form:"age" example:"24"`
-	Gender   string `form:"gender" example:"M"`
-	Country  string `form:"country" example:"TW"`
-	Platform string `form:"platform" example:"android"`
-	Offset   int32  `form:"offset" example:"0"`
-	Limit    int32  `form:"limit" example:"5"`
+	Age      *int32  `form:"age" example:"24"`
+	Gender   *string `form:"gender" example:"M"`
+	Country  *string `form:"country" example:"TW"`
+	Platform *string `form:"platform" example:"android"`
+	Offset   *int32  `form:"offset" example:"0"`
+	Limit    *int32  `form:"limit" example:"5"`
 }
 
 // @Summary		列出符合可⽤和匹配⽬標條件的廣告
@@ -59,27 +60,32 @@ func (handler *Handler) GetAdvertisementHandler(ctx *gin.Context) {
 func (handler *Handler) validateQueryParameters(queryParameters QueryParameters) error {
 
 	// age
-	if queryParameters.Age < 0 || queryParameters.Age > 100 { // 0 代表沒有參數
+	if queryParameters.Age != nil && (*queryParameters.Age < 1 || *queryParameters.Age > 100) {
 		return errors.New("invalid age value (must be 1 ~ 100)")
 	}
 
 	// gender
-	if queryParameters.Gender != "" && !handler.genderSet.Contains(queryParameters.Gender) {
+	if queryParameters.Gender != nil && !handler.genderSet.Contains(*queryParameters.Gender) {
 		return errors.New("invalid gender value")
 	}
 
 	// country
-	if queryParameters.Country != "" && !handler.countrySet.Contains(queryParameters.Country) {
+	if queryParameters.Country != nil && !handler.countrySet.Contains(*queryParameters.Country) {
 		return errors.New("invalid country value")
 	}
 
 	// platform
-	if queryParameters.Platform != "" && !handler.platformSet.Contains(queryParameters.Platform) {
+	if queryParameters.Platform != nil && !handler.platformSet.Contains(*queryParameters.Platform) {
 		return errors.New("invalid platform value")
 	}
 
+	// offset
+	if queryParameters.Offset != nil && (*queryParameters.Offset < 0) {
+		return errors.New("invalid offset value (must be >= 0)")
+	}
+
 	// limit
-	if queryParameters.Limit < 0 || queryParameters.Limit > 100 { // 0 代表沒有參數
+	if queryParameters.Limit != nil && (*queryParameters.Limit < 1 || *queryParameters.Limit > 100) {
 		return errors.New("invalid limit value (must be 1 ~ 100)")
 	}
 
@@ -91,41 +97,25 @@ func (handler *Handler) buildDBParams(queryParameters QueryParameters) db.GetAct
 	var params db.GetActiveAdvertisementsParams
 
 	// age
-	if queryParameters.Age == 0 {
-		params.Age = sql.NullInt32{Int32: 0, Valid: false}
-	} else {
-		params.Age = sql.NullInt32{Int32: queryParameters.Age, Valid: true}
-	}
+	params.Age = utils.NullInt32FromInt32Pointer(queryParameters.Age)
 
-	// gender
-	if queryParameters.Gender == "" {
-		params.Gender = sql.NullString{String: "", Valid: false}
-	} else {
-		params.Gender = sql.NullString{String: queryParameters.Gender, Valid: true}
-	}
-
-	// country
-	if queryParameters.Country == "" {
-		params.Country = sql.NullString{String: "", Valid: false}
-	} else {
-		params.Country = sql.NullString{String: queryParameters.Country, Valid: true}
-	}
-
-	// platform
-	if queryParameters.Platform == "" {
-		params.Platform = sql.NullString{String: "", Valid: false}
-	} else {
-		params.Platform = sql.NullString{String: queryParameters.Platform, Valid: true}
-	}
+	// gender/country/platform
+	params.Gender = utils.NullStringFromStringPointer(queryParameters.Gender)
+	params.Country = utils.NullStringFromStringPointer(queryParameters.Country)
+	params.Platform = utils.NullStringFromStringPointer(queryParameters.Platform)
 
 	// offset
-	params.Offset = queryParameters.Offset
+	if queryParameters.Offset == nil {
+		params.Offset = 0
+	} else {
+		params.Offset = *queryParameters.Offset
+	}
 
 	// limit
-	if queryParameters.Limit == 0 {
+	if queryParameters.Limit == nil {
 		params.Limit = 5
 	} else {
-		params.Limit = queryParameters.Limit
+		params.Limit = *queryParameters.Limit
 	}
 
 	return params

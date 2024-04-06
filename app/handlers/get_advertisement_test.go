@@ -7,6 +7,9 @@ import (
 	mapset "github.com/deckarep/golang-set/v2"
 )
 
+func Int32Ptr(i int32) *int32    { return &i }
+func StringPtr(s string) *string { return &s }
+
 func TestHandler_validateQueryParameters(t *testing.T) {
 	handler := Handler{
 		genderSet:   mapset.NewSet("M", "F"),
@@ -21,83 +24,124 @@ func TestHandler_validateQueryParameters(t *testing.T) {
 		{
 			name: "valid query parameters (all)",
 			queryParameters: QueryParameters{
-				Age:      24,
-				Gender:   "M",
-				Country:  "TW",
-				Platform: "android",
-				Offset:   0,
-				Limit:    5,
+				Age:      Int32Ptr(25),
+				Gender:   StringPtr("M"),
+				Country:  StringPtr("TW"),
+				Platform: StringPtr("android"),
+				Offset:   Int32Ptr(0),
+				Limit:    Int32Ptr(5),
 			},
 			expectedError: nil,
 		},
 		{
 			name: "valid query parameters (partial)",
 			queryParameters: QueryParameters{
-				Gender:   "M",
-				Platform: "android",
-				Limit:    5,
+				Age:      nil,
+				Gender:   StringPtr("M"),
+				Country:  nil,
+				Platform: StringPtr("android"),
+				Offset:   nil,
+				Limit:    Int32Ptr(5),
+			},
+			expectedError: nil,
+		},
+		{
+			name: "valid query parameters (partial)",
+			queryParameters: QueryParameters{
+				Age:      Int32Ptr(25),
+				Gender:   nil,
+				Country:  StringPtr("TW"),
+				Platform: nil,
+				Offset:   Int32Ptr(0),
+				Limit:    nil,
+			},
+			expectedError: nil,
+		},
+		{
+			name: "valid query parameters (empty)",
+			queryParameters: QueryParameters{
+				Age:      nil,
+				Gender:   nil,
+				Country:  nil,
+				Platform: nil,
+				Offset:   nil,
+				Limit:    nil,
 			},
 			expectedError: nil,
 		},
 		{
 			name: "invalid age (negative)",
 			queryParameters: QueryParameters{
-				Age:      -1,
-				Gender:   "M",
-				Country:  "TW",
-				Platform: "android",
-				Offset:   0,
-				Limit:    5,
+				Age: Int32Ptr(-1),
 			},
 			expectedError: errors.New("invalid age value (must be 1 ~ 100)"),
 		},
 		{
-			name: "invalid age (>100)",
+			name: "invalid age (zero)",
 			queryParameters: QueryParameters{
-				Age:      150,
-				Gender:   "M",
-				Country:  "TW",
-				Platform: "android",
-				Offset:   0,
-				Limit:    5,
+				Age: Int32Ptr(0),
+			},
+			expectedError: errors.New("invalid age value (must be 1 ~ 100)"),
+		},
+		{
+			name: "invalid age (> 100)",
+			queryParameters: QueryParameters{
+				Age: Int32Ptr(101),
 			},
 			expectedError: errors.New("invalid age value (must be 1 ~ 100)"),
 		},
 		{
 			name: "invalid gender",
 			queryParameters: QueryParameters{
-				Age:      24,
-				Gender:   "X",
-				Country:  "TW",
-				Platform: "android",
-				Offset:   0,
-				Limit:    5,
+				Gender: StringPtr("X"),
 			},
 			expectedError: errors.New("invalid gender value"),
 		},
 		{
 			name: "invalid country",
 			queryParameters: QueryParameters{
-				Age:      24,
-				Gender:   "M",
-				Country:  "AA",
-				Platform: "android",
-				Offset:   0,
-				Limit:    5,
+				Country: StringPtr("AA"),
 			},
 			expectedError: errors.New("invalid country value"),
 		},
 		{
 			name: "invalid platform",
 			queryParameters: QueryParameters{
-				Age:      24,
-				Gender:   "M",
-				Country:  "TW",
-				Platform: "computer",
-				Offset:   0,
-				Limit:    5,
+				Platform: StringPtr("computer"),
 			},
 			expectedError: errors.New("invalid platform value"),
+		},
+		{
+			name: "invalid offset (negative)",
+			queryParameters: QueryParameters{
+				Offset: Int32Ptr(-1),
+				Limit:  Int32Ptr(5),
+			},
+			expectedError: errors.New("invalid offset value (must be >= 0)"),
+		},
+		{
+			name: "invalid limit (zero)",
+			queryParameters: QueryParameters{
+				Offset: Int32Ptr(0),
+				Limit:  Int32Ptr(0),
+			},
+			expectedError: errors.New("invalid limit value (must be 1 ~ 100)"),
+		},
+		{
+			name: "invalid limit (negative)",
+			queryParameters: QueryParameters{
+				Offset: Int32Ptr(0),
+				Limit:  Int32Ptr(-1),
+			},
+			expectedError: errors.New("invalid limit value (must be 1 ~ 100)"),
+		},
+		{
+			name: "invalid limit (> 100)",
+			queryParameters: QueryParameters{
+				Offset: Int32Ptr(0),
+				Limit:  Int32Ptr(101),
+			},
+			expectedError: errors.New("invalid limit value (must be 1 ~ 100)"),
 		},
 	}
 	for _, tc := range testCases {
