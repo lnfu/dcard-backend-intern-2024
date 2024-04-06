@@ -43,6 +43,8 @@ func (handler *Handler) CreateAdvertisementHandler(ctx *gin.Context) {
 		return
 	}
 
+	// TODO validate startAt <= endAt
+
 	// add ad to database
 	advertisementId, err := handler.databaseQueries.CreateAdvertisement(ctx, sqlc.CreateAdvertisementParams{
 		Title:   body.Title,
@@ -141,6 +143,11 @@ func (handler *Handler) validateCondition(condition AdvertisementCondition) erro
 	// ageEnd
 	if condition.AgeEnd != nil && (*condition.AgeEnd < 1 || *condition.AgeEnd > 100) {
 		return errors.New("invalid ageEnd value (must be 1 ~ 100)")
+	}
+
+	// ageStart <= ageEnd
+	if condition.AgeStart != nil && condition.AgeEnd != nil && *condition.AgeStart > *condition.AgeEnd {
+		return errors.New("invalid ageEnd value (must be >= ageStart)")
 	}
 
 	// gender
