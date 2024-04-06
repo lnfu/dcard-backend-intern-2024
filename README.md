@@ -23,9 +23,7 @@ MYSQL_PASSWORD=
 ```
 
 ```
-make docker-up
-make migrate-up
-go run .
+docker compose up --build
 ```
 
 ![database design](docs/database_design.png)

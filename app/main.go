@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 	"github.com/lnfu/dcard-intern/app/cache"
 	"github.com/lnfu/dcard-intern/app/config"
 	docs "github.com/lnfu/dcard-intern/app/docs"
@@ -24,7 +23,7 @@ import (
 // @Host localhost:8080
 func main() {
 	// Config
-	godotenv.Load("../.env")
+	// godotenv.Load("../.env") // local 執行才需要
 	env := os.Getenv("ENV")
 	conf := config.Init(env)
 

@@ -1,4 +1,4 @@
-module github.com/lnfu/dcard-intern
+module github.com/lnfu/dcard-intern/app
 
 go 1.22.1
 

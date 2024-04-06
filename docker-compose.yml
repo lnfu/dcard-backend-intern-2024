@@ -1,7 +1,9 @@
 services:
+
   mysql:
     container_name: dcard_mysql
     image: mysql:8.0.36
+    restart: always
     volumes:
       - mysql_data:/var/lib/mysql
     environment:
@@ -9,21 +11,50 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-    ports:
-      - "3306:3306"
+    # ports:
+    #   - "3306:3306"
     deploy:
       resources:
         limits:
           memory: 1G
 
+  migrate:
+    container_name: dcard_migrate
+    build:
+      dockerfile: db/Dockerfile
+    volumes:
+      - ./db/migrations:/migrations
+    command: ["-path", "./migrations", "-database",  "mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}", "-verbose", "up"]
+    depends_on:
+      - mysql
+
   redis:
     container_name: dcard_redis
     image: redis:7.2-alpine
-    ports:
-      - "6379:6379"
+    restart: always
+    # ports:
+    #   - "6379:6379"
     deploy:
       resources:
         limits:
           memory: 1G
+
+  app:
+    container_name: dcard_app
+    build:
+      dockerfile: app/Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=${ENV}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    depends_on:
+      - mysql
+      - redis
+      - migrate
+    
 volumes:
   mysql_data: {}
