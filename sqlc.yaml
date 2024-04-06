@@ -3,12 +3,12 @@ version: "2"
 #   project: "<PROJECT_ID>"
 sql:
   - schema: "db/migrations"
-    queries: "db/query.sql"
+    queries: "app/models/query.sql"
     engine: "mysql"
     gen:
       go: 
-        package: "db"
-        out: "db/sqlc"
+        package: "models"
+        out: "app/models/sqlc"
         emit_json_tags: true
         emit_exact_table_names: false
 
