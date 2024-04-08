@@ -16,8 +16,6 @@ To run the app, follow these steps:
 
 ```sh
 # at .env
-ENV=prod
-
 MYSQL_ROOT_PASSWORD=
 MYSQL_DATABASE=
 MYSQL_USER=
