@@ -47,14 +47,18 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - ENV=${ENV}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    command: 
+      - -mode
+      - prod
     depends_on:
       - mysql
       - redis
       - migrate
+    profiles:
+      - prod
 
 volumes:
   mysql_data: {}

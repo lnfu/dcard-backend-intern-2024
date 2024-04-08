@@ -26,13 +26,19 @@ MYSQL_PASSWORD=
 
 2. Build and run the app using Docker Compose:
 
-```
-docker compose up --build
+```sh
+docker compose --profile prod up --build
 ```
 
 3. Access the API endpoint at `localhost:8080/api/v1/ad`
 
 4. For Swagger API documentation, visit `localhost:8080/api/v1/swagger/index.html`
+
+5. To shut down the docker environment, run:
+
+```sh
+docker compose --profile prod down -v
+```
 
 ## Database Design
 
@@ -47,3 +53,22 @@ k6 run script.js
 ```
 
 ![k6 result](docs/k6_result.png)
+
+## Development
+
+For development purposes, follow these steps:
+
+1. Start the Docker environment (database & cache)
+
+```sh
+docker compose up -d
+```
+
+2. Navigate to the app directory and run the application in development mode:
+
+```sh
+cd app
+go run . -mode dev
+```
+
+Now, you can make changes to the code and test them locally.
