@@ -27,6 +27,8 @@ services:
     command: ["-path", "./migrations", "-database",  "mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}", "-verbose", "up"]
     depends_on:
       - mysql
+    profiles:
+      - prod
 
   redis:
     container_name: dcard_redis

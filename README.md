@@ -72,7 +72,13 @@ MYSQL_PASSWORD=
 docker compose up -d
 ```
 
-3. Navigate to the app directory and run the application in development mode:
+3. Database Migration: Before executing following commands, ensure that the MySQL environment is fully set up. Running the following command prematurely might result in errors due to incomplete MySQL Docker container setup.
+
+```sh
+migrate -path ./migrations -database mysql://root:[MYSQL_ROOT_PASSWORD]@tcp(mysql:3306)/[MYSQL_DATABASE] -verbose up
+```
+
+4. Navigate to the app directory and run the application in development mode:
 
 ```sh
 cd app
