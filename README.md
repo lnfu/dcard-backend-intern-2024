@@ -56,13 +56,23 @@ k6 run script.js
 
 For development purposes, follow these steps:
 
-1. Start the Docker environment (database & cache)
+1. Add your application configuration to `.env` file in the root of the project:
+
+```sh
+# at .env
+MYSQL_ROOT_PASSWORD=
+MYSQL_DATABASE=
+MYSQL_USER=
+MYSQL_PASSWORD=
+```
+
+2. Start the Docker environment (database & cache)
 
 ```sh
 docker compose up -d
 ```
 
-2. Navigate to the app directory and run the application in development mode:
+3. Navigate to the app directory and run the application in development mode:
 
 ```sh
 cd app
